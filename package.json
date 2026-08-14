@@ -1,0 +1,40 @@
+{
+  "name": "linda-kura",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -n web,api -c green,cyan \"NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev\" \"tsx src/server/index.ts\"",
+    "dev:web": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next dev",
+    "dev:api": "tsx src/server/index.ts",
+    "build": "NEXT_IGNORE_INCORRECT_LOCKFILE=1 next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@fastify/cors": "^9.0.1",
+    "fastify": "^4.28.1",
+    "framer-motion": "^11.11.17",
+    "ioredis": "^5.4.1",
+    "maplibre-gl": "^4.7.1",
+    "next": "^14.2.31",
+    "next-auth": "^4.24.7",
+    "pg": "^8.12.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "socket.io": "^4.7.5",
+    "socket.io-client": "^4.7.5"
+  },
+  "devDependencies": {
+    "@types/geojson": "^7946.0.14",
+    "@types/node": "^20.14.12",
+    "@types/pg": "^8.11.6",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "concurrently": "^8.2.2",
+    "postcss": "^8.4.40",
+    "tailwindcss": "^3.4.7",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4"
+  }
+}
