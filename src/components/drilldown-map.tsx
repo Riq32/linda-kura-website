@@ -103,6 +103,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
     if (!container.current || mapRef.current) return;
     const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#0d4d3b" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 53, bearing: -10 });
     mapRef.current = map;
+    requestAnimationFrame(() => map.resize());
     map.on("load", async () => {
       try {
         map.addSource("boundaries", { type: "geojson", data: { type: "FeatureCollection", features: [] }, promoteId: "shapeID" });
@@ -148,13 +149,20 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
     return () => { map.remove(); mapRef.current = undefined; };
   }, [drill, loadCollection, showFeatures]);
 
+  useEffect(() => {
+    const resizeMap = () => requestAnimationFrame(() => mapRef.current?.resize());
+    resizeMap();
+    window.addEventListener("resize", resizeMap);
+    return () => window.removeEventListener("resize", resizeMap);
+  }, []);
+
   const crumbs = [{ label: "Kenya", level: "country" as DrillLevel }, ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" as DrillLevel }] : []), ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "ward" as DrillLevel }] : [])];
   const caption = location.level === "country" ? { eyebrow: "National view", title: "Kenya counties", copy: "Select a county to explore its constituencies." } : location.level === "county" ? { eyebrow: "County view", title: `${location.county?.properties.shapeName ?? "County"} constituencies`, copy: "Select a constituency to explore its wards." } : { eyebrow: "Constituency view", title: `${location.constituency?.properties.shapeName ?? "Constituency"} wards`, copy: "Hover a ward to identify its boundary." };
-  return <div className="relative h-full min-h-[min(760px,calc(100vh-180px))] overflow-hidden rounded-[32px_28px_32px_28px] bg-[#07291f] shadow-elevation">
+  return <div className="relative h-full min-h-0 min-w-0 overflow-hidden rounded-[32px_28px_32px_28px] bg-[#07291f] shadow-elevation">
     <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_17%_20%,rgba(75,154,112,.22),transparent_31rem),radial-gradient(circle_at_87%_83%,rgba(230,198,113,.15),transparent_30rem),linear-gradient(145deg,#0d4d3b_0%,#082f25_47%,#041c16_100%)]" />
-    <div ref={container} className="relative z-[2] h-full min-h-[min(760px,calc(100vh-180px))]" aria-label="Interactive Kenya administrative boundary map" />
+    <div ref={container} className="absolute inset-0 z-[2]" aria-label="Interactive Kenya administrative boundary map" />
     <div className="pointer-events-none absolute left-5 top-4 z-20 grid gap-1 sm:left-[clamp(20px,4vw,56px)] sm:top-7"><span className="text-[15px] font-bold tracking-[.16em] text-ink">KURA</span><span className="text-[11px] uppercase tracking-[.12em] text-[#a5d6bb]">Kenya boundary explorer</span></div>
-    <nav className="absolute left-4 right-4 top-12 z-10 flex w-auto flex-wrap items-center gap-1 rounded-[22px] border border-white/[.16] bg-[rgba(7,41,31,.72)] p-2.5 shadow-elevation backdrop-blur-xl sm:left-1/2 sm:right-auto sm:top-[25px] sm:w-[min(620px,calc(100%-168px))] sm:-translate-x-1/2" aria-label="Map location">
+    <nav className="absolute left-4 right-4 top-12 z-10 flex w-auto flex-wrap items-center justify-between gap-1 rounded-[22px] border border-white/[.16] bg-[rgba(7,41,31,.72)] p-2.5 shadow-elevation backdrop-blur-xl md:left-auto md:right-5 md:top-6 md:w-[min(460px,calc(100%_-_150px))] md:translate-x-0" aria-label="Map location">
       {crumbs.map((crumb, index) => <span key={crumb.level} className="flex items-center gap-1">{index > 0 && <span className="px-1 text-white/40">›</span>}<button type="button" onClick={() => index < crumbs.length - 1 && void navigate(crumb.level)} disabled={index === crumbs.length - 1} className="rounded-[10px] px-2 py-1.5 text-[13px] font-medium text-[#a5d6bb] transition hover:bg-[#a5d6bb]/15 hover:text-ink disabled:cursor-default disabled:text-ink disabled:hover:bg-transparent active:scale-[.98]">{crumb.label}</button></span>)}
     </nav>
     <aside className="absolute bottom-5 left-5 right-5 z-10 w-auto rounded-[14px] border border-white/[.16] bg-[rgba(4,30,22,.54)] px-[18px] py-4 shadow-elevation backdrop-blur-xl sm:bottom-8 sm:left-[clamp(20px,4vw,56px)] sm:right-auto sm:w-[min(286px,calc(100%-40px))]" aria-live="polite"><p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[.13em] text-[#e6c671]">{caption.eyebrow}</p><h2 className="text-base font-semibold tracking-[-.015em] text-ink">{caption.title}</h2><p className="mt-1 text-xs leading-[1.45] text-[#b7c5b8]">{caption.copy}</p></aside>
