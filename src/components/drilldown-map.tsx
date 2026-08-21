@@ -50,6 +50,27 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
   const electionDataRef = useRef<Record<string, RegionElectionData>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ name: string; level: string; hierarchy?: string; properties: any }[]>([]);
+  const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const map = mapRef.current;
+    
+    // Animate camera on view mode change, ensuring map is loaded
+    const animateCamera = () => {
+      if (viewMode === "3D") {
+        map.easeTo({ pitch: 58, bearing: -15, duration: 1000 });
+      } else {
+        map.easeTo({ pitch: 0, bearing: 0, duration: 1000 });
+      }
+    };
+
+    if (map.isStyleLoaded()) {
+      animateCamera();
+    } else {
+      map.once("load", animateCamera);
+    }
+  }, [viewMode]);
 
   const loadCollection = useCallback(async (name: keyof typeof files) => {
     if (!dataRef.current[name]) {
@@ -93,7 +114,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
 
     visibleFeaturesRef.current = features;
     const bounds = bbox(features);
-    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 72, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800, pitch: 53, bearing: -10, maxZoom: next.level === "ward" ? 13 : next.level === "constituency" ? 11.5 : 9.5 });
+    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 72, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800, maxZoom: next.level === "ward" ? 13 : next.level === "constituency" ? 11.5 : 9.5 });
     locationRef.current = next; setLocation(next); onLocationChange(next);
   }, [onLocationChange]);
 
@@ -181,7 +202,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
-    const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#111213" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 53, bearing: -10 });
+    const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#111213" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 58, bearing: -15 });
     mapRef.current = map;
     requestAnimationFrame(() => map.resize());
     map.on("load", async () => {
@@ -338,8 +359,14 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
       )}
     </div>
 
-    <nav className="absolute left-6 top-20 z-10 flex flex-wrap items-center gap-2" aria-label="Map location">
-      {crumbs.map((crumb, index) => <span key={crumb.level} className="flex items-center gap-2">{index > 0 && <span className="text-[10px] text-[#444]">/</span>}<button type="button" onClick={() => index < crumbs.length - 1 && void navigate(crumb.level)} disabled={index === crumbs.length - 1} className="text-xs font-medium tracking-wide text-[#888] transition hover:text-white disabled:cursor-default disabled:text-white">{crumb.label}</button></span>)}
+    <nav className="absolute left-6 top-20 z-10 flex flex-wrap items-center gap-4" aria-label="Map location">
+      <div className="flex flex-wrap items-center gap-2">
+        {crumbs.map((crumb, index) => <span key={crumb.level} className="flex items-center gap-2">{index > 0 && <span className="text-[10px] text-[#444]">/</span>}<button type="button" onClick={() => index < crumbs.length - 1 && void navigate(crumb.level)} disabled={index === crumbs.length - 1} className="text-xs font-medium tracking-wide text-[#888] transition hover:text-white disabled:cursor-default disabled:text-white">{crumb.label}</button></span>)}
+      </div>
+      <div className="flex items-center rounded-full border border-white/10 bg-black/60 p-1 backdrop-blur-md">
+        <button type="button" onClick={() => setViewMode("2D")} className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${viewMode === "2D" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"}`}>2D</button>
+        <button type="button" onClick={() => setViewMode("3D")} className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${viewMode === "3D" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"}`}>3D</button>
+      </div>
     </nav>
 
     {tooltip && <div className="pointer-events-none absolute z-20 border border-[#2A2C2E] bg-[#181A1C] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}</div>}
