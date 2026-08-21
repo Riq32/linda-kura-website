@@ -5,7 +5,7 @@ import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
 import type { AdminUnit, DrillLevel } from "@/shared/types";
 
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, AdminUnit["properties"]>;
-type MapLocation = { level: DrillLevel; county?: AdminUnit; constituency?: AdminUnit };
+type MapLocation = { level: DrillLevel; county?: AdminUnit; constituency?: AdminUnit; ward?: AdminUnit };
 const files = { counties: "/geojson/counties.geojson", constituencies: "/geojson/constituencies.geojson", wards: "/geojson/wards.geojson" } as const;
 
 function errorMessage(error: unknown) {
@@ -113,7 +113,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
   const electionDataRef = useRef<Record<string, any>>({});
   const [hoveredRegionData, setHoveredRegionData] = useState<{ name: string; data: any }>();
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<{ name: string; level: string; properties: any }[]>([]);
+  const [searchResults, setSearchResults] = useState<{ name: string; level: string; hierarchy?: string; properties: any }[]>([]);
 
   const loadCollection = useCallback(async (name: keyof typeof files) => {
     if (!dataRef.current[name]) {
@@ -162,7 +162,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
 
     visibleFeaturesRef.current = features;
     const bounds = bbox(features);
-    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 72, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800, pitch: 53, bearing: -10, maxZoom: next.level === "ward" ? 11.2 : 8.8 });
+    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 72, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800, pitch: 53, bearing: -10, maxZoom: next.level === "ward" ? 13 : next.level === "constituency" ? 11.5 : 9.5 });
     locationRef.current = next; setLocation(next); onLocationChange(next);
   }, [onLocationChange]);
 
@@ -174,6 +174,10 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
       if (target === "county" && locationRef.current.county) {
         const constituencies = await loadCollection("constituencies");
         showFeatures(constituencies.features.filter(feature => feature.properties.county_shapeID === locationRef.current.county?.properties.shapeID) as AdminUnit[], { level: "county", county: locationRef.current.county });
+      }
+      if (target === "constituency" && locationRef.current.constituency) {
+        const wards = await loadCollection("wards");
+        showFeatures(wards.features.filter(feature => feature.properties.constituency_shapeID === locationRef.current.constituency?.properties.shapeID) as AdminUnit[], { level: "constituency", county: locationRef.current.county, constituency: locationRef.current.constituency });
       }
     } catch (error) { setLoadError(errorMessage(error)); }
   }, [loadCollection, showFeatures]);
@@ -192,7 +196,11 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
         const constituencies = await loadCollection("constituencies");
         const constituency = constituencies.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
         const wards = await loadCollection("wards");
-        showFeatures(wards.features.filter(feature => feature.properties.constituency_shapeID === properties.shapeID) as AdminUnit[], { level: "ward", county: current.county, constituency });
+        showFeatures(wards.features.filter(feature => feature.properties.constituency_shapeID === properties.shapeID) as AdminUnit[], { level: "constituency", county: current.county, constituency });
+      } else if (current.level === "constituency") {
+        const wards = await loadCollection("wards");
+        const ward = wards.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
+        showFeatures([ward], { level: "ward", county: current.county, constituency: current.constituency, ward });
       }
     } catch (error) { setLoadError(errorMessage(error)); }
   }, [loadCollection, showFeatures]);
@@ -208,8 +216,8 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
         const constituencies = await loadCollection("constituencies");
         const filtered = constituencies.features.filter(f => f.properties.county_shapeID === properties.shapeID) as AdminUnit[];
         showFeatures(filtered, { level: "county", county });
-      } else if (level === "Constituency" || level === "Ward") {
-        const targetConstituencyId = level === "Constituency" ? properties.shapeID : properties.constituency_shapeID;
+      } else if (level === "Constituency") {
+        const targetConstituencyId = properties.shapeID;
         const constituencies = await loadCollection("constituencies");
         const constituency = constituencies.features.find(f => f.properties.shapeID === targetConstituencyId) as AdminUnit;
         
@@ -220,7 +228,20 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
         const wards = await loadCollection("wards");
         const filtered = wards.features.filter(f => f.properties.constituency_shapeID === targetConstituencyId) as AdminUnit[];
         
-        showFeatures(filtered, { level: "ward", county, constituency });
+        showFeatures(filtered, { level: "constituency", county, constituency });
+      } else if (level === "Ward") {
+        const targetConstituencyId = properties.constituency_shapeID;
+        const constituencies = await loadCollection("constituencies");
+        const constituency = constituencies.features.find(f => f.properties.shapeID === targetConstituencyId) as AdminUnit;
+        
+        const targetCountyId = properties.county_shapeID || constituency?.properties?.county_shapeID;
+        const counties = await loadCollection("counties");
+        const county = counties.features.find(f => f.properties.shapeID === targetCountyId) as AdminUnit;
+        
+        const wards = await loadCollection("wards");
+        const ward = wards.features.find(f => f.properties.shapeID === properties.shapeID) as AdminUnit;
+        
+        showFeatures([ward], { level: "ward", county, constituency, ward });
       }
     } catch (error) {
       setLoadError(errorMessage(error));
@@ -229,7 +250,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
-    const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#0d4d3b" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 53, bearing: -10 });
+    const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#111213" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 53, bearing: -10 });
     mapRef.current = map;
     requestAnimationFrame(() => map.resize());
     map.on("load", async () => {
@@ -243,8 +264,8 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
             "fill-extrusion-color": [
               "case",
               ["boolean", ["feature-state", "hover"], false],
-              "#ffffff",
-              ["coalesce", ["feature-state", "heatmapColor"], "#07291f"]
+              "#FFE600",
+              ["coalesce", ["feature-state", "heatmapColor"], "#141618"]
             ],
             "fill-extrusion-height": [
               "interpolate",
@@ -257,7 +278,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
             "fill-extrusion-opacity": .88
           }
         });
-        map.addLayer({ id: "boundary-lines", type: "line", source: "boundaries", paint: { "line-color": "#eef3ef", "line-opacity": .44, "line-width": 1.1 } });
+        map.addLayer({ id: "boundary-lines", type: "line", source: "boundaries", paint: { "line-color": "#333333", "line-opacity": .6, "line-width": 1.1 } });
       const clearHover = () => {
         if (hoveredId.current) map.setFeatureState({ source: "boundaries", id: hoveredId.current }, { hover: false });
         hoveredId.current = undefined;
@@ -316,7 +337,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
       return;
     }
     const query = searchQuery.toLowerCase();
-    const results: { name: string; level: string; properties: any }[] = [];
+    const results: { name: string; level: string; hierarchy?: string; properties: any }[] = [];
     
     const searchLevel = (levelName: keyof typeof files, displayLevel: string) => {
       const collection = dataRef.current[levelName];
@@ -324,7 +345,13 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
         for (const feature of collection.features) {
           if (feature.properties.shapeName?.toLowerCase().includes(query)) {
             if (!results.some(r => r.properties.shapeID === feature.properties.shapeID)) {
-              results.push({ name: String(feature.properties.shapeName), level: displayLevel, properties: feature.properties });
+              let hierarchy = displayLevel;
+              if (displayLevel === "Ward") {
+                hierarchy = `Ward in ${feature.properties.constituency_shapeName ?? "Unknown"}, ${feature.properties.county_shapeName ?? "Unknown"}`;
+              } else if (displayLevel === "Constituency") {
+                hierarchy = `Constituency in ${feature.properties.county_shapeName ?? "Unknown"}`;
+              }
+              results.push({ name: String(feature.properties.shapeName), level: displayLevel, hierarchy, properties: feature.properties });
             }
             if (results.length >= 5) return true;
           }
@@ -342,32 +369,36 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
     setSearchResults(results.slice(0, 5));
   }, [searchQuery]);
 
-  const crumbs = [{ label: "Kenya", level: "country" as DrillLevel }, ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" as DrillLevel }] : []), ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "ward" as DrillLevel }] : [])];
+  const crumbs = [
+    { label: "Kenya", level: "country" as DrillLevel },
+    ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" as DrillLevel }] : []),
+    ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "constituency" as DrillLevel }] : []),
+    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : [])
+  ];
   const caption = location.level === "country" ? { eyebrow: "National view", title: "Kenya counties", copy: "Select a county to explore its constituencies." } : location.level === "county" ? { eyebrow: "County view", title: `${location.county?.properties.shapeName ?? "County"} constituencies`, copy: "Select a constituency to explore its wards." } : { eyebrow: "Constituency view", title: `${location.constituency?.properties.shapeName ?? "Constituency"} wards`, copy: "Hover a ward to identify its boundary." };
-  return <div className="relative h-full min-h-0 min-w-0 overflow-hidden rounded-[32px_28px_32px_28px] bg-[#07291f] shadow-elevation">
-    <div className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(circle_at_17%_20%,rgba(75,154,112,.22),transparent_31rem),radial-gradient(circle_at_87%_83%,rgba(230,198,113,.15),transparent_30rem),linear-gradient(145deg,#0d4d3b_0%,#082f25_47%,#041c16_100%)]" />
+  return <div className="relative h-full min-h-0 min-w-0 overflow-hidden bg-[#111213]">
     <div ref={container} className="absolute inset-0 z-[2]" aria-label="Interactive Kenya administrative boundary map" />
-    <div className="pointer-events-none absolute left-5 top-4 z-20 grid gap-1 sm:left-[clamp(20px,4vw,56px)] sm:top-7"><span className="text-[15px] font-bold tracking-[.16em] text-ink">KURA</span><span className="text-[11px] uppercase tracking-[.12em] text-[#a5d6bb]">Kenya boundary explorer</span></div>
+    <div className="pointer-events-none absolute left-6 top-6 z-20 grid gap-0.5"><span className="text-2xl font-bold tracking-[-0.03em] text-white">KURA</span><span className="text-[10px] uppercase tracking-[0.05em] text-[#888]">Kenya boundary explorer</span></div>
     
-    <div className="absolute right-4 top-4 z-30 w-[min(300px,calc(100vw-32px))] sm:right-5 sm:top-6">
+    <div className="absolute right-6 top-6 z-30 w-[min(300px,calc(100vw-48px))]">
       <input
         type="text"
         placeholder="Search regions..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
-        className="w-full rounded-[14px] border border-white/[.16] bg-[rgba(4,30,22,.8)] px-5 py-3 text-sm font-medium text-ink placeholder:text-ink/40 shadow-elevation backdrop-blur-xl transition hover:bg-[rgba(4,30,22,.9)] focus:border-[#a5d6bb] focus:bg-black/90 focus:outline-none"
+        className="w-full border border-[#2A2C2E] bg-[#181A1C] px-4 py-2.5 text-sm font-medium text-white placeholder:text-[#666] transition focus:border-[#FFE600] focus:outline-none"
       />
       {searchResults.length > 0 && (
-        <ul className="absolute mt-2 w-full overflow-hidden rounded-[14px] border border-white/[.16] bg-[rgba(4,30,22,.9)] shadow-elevation backdrop-blur-xl">
+        <ul className="absolute mt-1 w-full border border-[#2A2C2E] bg-[#181A1C]">
           {searchResults.map((result, i) => (
             <li key={i}>
               <button
                 type="button"
-                className="w-full border-b border-white/[.08] px-5 py-3 text-left transition hover:bg-white/10 last:border-0 active:bg-white/5"
+                className="w-full border-b border-[#2A2C2E] px-4 py-3 text-left transition hover:bg-[#202224] last:border-0"
                 onClick={() => void jumpToResult(result)}
               >
-                <div className="text-sm font-semibold text-ink">
-                  {result.name} <span className="text-[11px] font-medium text-[#a5d6bb]">({result.level})</span>
+                <div className="text-sm font-medium tracking-tight text-white">
+                  {result.name} <span className="text-[10px] uppercase tracking-wider text-[#888]">({result.hierarchy || result.level})</span>
                 </div>
               </button>
             </li>
@@ -376,32 +407,34 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
       )}
     </div>
 
-    <nav className="absolute left-4 right-4 top-12 z-10 flex w-auto flex-wrap items-center justify-between gap-1 rounded-[22px] border border-white/[.16] bg-[rgba(7,41,31,.72)] p-2.5 shadow-elevation backdrop-blur-xl md:left-auto md:right-5 md:top-6 md:w-[min(460px,calc(100%_-_150px))] md:translate-x-0" aria-label="Map location">
-      {crumbs.map((crumb, index) => <span key={crumb.level} className="flex items-center gap-1">{index > 0 && <span className="px-1 text-white/40">›</span>}<button type="button" onClick={() => index < crumbs.length - 1 && void navigate(crumb.level)} disabled={index === crumbs.length - 1} className="rounded-[10px] px-2 py-1.5 text-[13px] font-medium text-[#a5d6bb] transition hover:bg-[#a5d6bb]/15 hover:text-ink disabled:cursor-default disabled:text-ink disabled:hover:bg-transparent active:scale-[.98]">{crumb.label}</button></span>)}
+    <nav className="absolute left-6 top-20 z-10 flex flex-wrap items-center gap-2" aria-label="Map location">
+      {crumbs.map((crumb, index) => <span key={crumb.level} className="flex items-center gap-2">{index > 0 && <span className="text-[10px] text-[#444]">/</span>}<button type="button" onClick={() => index < crumbs.length - 1 && void navigate(crumb.level)} disabled={index === crumbs.length - 1} className="text-xs font-medium tracking-wide text-[#888] transition hover:text-white disabled:cursor-default disabled:text-white">{crumb.label}</button></span>)}
     </nav>
-    <aside className="absolute bottom-5 left-5 right-5 z-10 w-auto rounded-[14px] border border-white/[.16] bg-black/70 px-[18px] py-4 shadow-elevation backdrop-blur-xl sm:bottom-8 sm:left-[clamp(20px,4vw,56px)] sm:right-auto sm:w-[min(286px,calc(100%-40px))]" aria-live="polite">
+    <aside className="absolute bottom-6 left-6 z-10 w-[280px] border border-[#2A2C2E] bg-[#181A1C] p-5" aria-live="polite">
       {hoveredRegionData?.data ? (
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[.13em] text-[#e6c671]">Projected Winner: {hoveredRegionData.data.winningParty}</p>
-          <h2 className="text-base font-semibold tracking-[-.015em] text-ink">{hoveredRegionData.name}</h2>
+          <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.05em] text-[#888]">Projected Winner / <span className="text-white">{hoveredRegionData.data.winningParty}</span></p>
+          <h2 className="mb-4 text-xl font-bold tracking-[-0.03em] text-white">{hoveredRegionData.name}</h2>
           
-          <div className="mt-3 flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="mb-3 flex h-1.5 w-full bg-[#111213]">
             {hoveredRegionData.data.partyBreakdown.map((party: any) => {
               const partyColor = PARTIES.find(p => p.name === party.name)?.color ?? '#555';
-              return (
-                <div key={party.name} style={{ width: `${party.percentage}%`, backgroundColor: partyColor }} />
+              return party.percentage > 0 && (
+                <div key={party.name} style={{ width: `${party.percentage}%`, backgroundColor: partyColor }} className="h-full" />
               );
             })}
           </div>
           
-          <div className="mt-3 flex justify-between text-[11px] font-medium text-ink/80">
+          <div className="flex flex-col gap-1.5">
             {hoveredRegionData.data.partyBreakdown.slice(0, 2).map((party: any) => {
               const partyColor = PARTIES.find(p => p.name === party.name)?.color ?? '#555';
               return (
-                <div key={party.name} className="flex items-center gap-1.5">
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: partyColor }} />
-                  <span className="text-ink">{party.name}</span>
-                  <span className="opacity-60">{party.percentage.toFixed(1)}%</span>
+                <div key={party.name} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="h-2 w-2" style={{ backgroundColor: partyColor }} />
+                    <span className="font-medium text-[#ccc]">{party.name}</span>
+                  </div>
+                  <span className="font-mono text-white">{party.percentage}%</span>
                 </div>
               );
             })}
@@ -409,14 +442,13 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
         </div>
       ) : (
         <div>
-          <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[.13em] text-[#e6c671]">{caption.eyebrow}</p>
-          <h2 className="text-base font-semibold tracking-[-.015em] text-ink">{caption.title}</h2>
-          <p className="mt-1 text-xs leading-[1.45] text-[#b7c5b8]">{caption.copy}</p>
+          <h3 className="mb-2 text-sm font-bold tracking-tight text-white">{caption.eyebrow}</h3>
+          <p className="text-xs leading-relaxed text-[#888]">{caption.copy}</p>
         </div>
       )}
     </aside>
-    {tooltip && <div className="pointer-events-none absolute z-20 rounded-[10px] border border-[#f6e8b7]/35 bg-[rgba(3,27,19,.91)] px-3 py-2 text-xs font-semibold text-ink shadow-elevation" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}</div>}
-    {isLoading && <div className="absolute inset-0 z-20 grid place-items-center bg-bg/60 text-xs font-semibold uppercase tracking-[.1em] text-[#a5d6bb] backdrop-blur-sm" role="status"><span className="rounded-full border border-white/[.16] bg-[rgba(3,34,24,.7)] px-4 py-3">Loading Kenya</span></div>}
-    {loadError && <div className="absolute inset-4 z-30 grid place-items-center rounded-continuous bg-panel/95 p-6 text-center shadow-elevation" role="alert"><div><p className="text-sm font-semibold text-ink">Map unavailable</p><p className="mt-2 max-w-xs text-xs leading-relaxed text-dim">{loadError}</p><button type="button" onClick={() => void navigate("country")} className="mt-4 rounded-xl bg-kenya-green px-3 py-2 text-xs font-semibold text-ink transition hover:brightness-110 active:scale-[.98]">Retry map</button></div></div>}
+    {tooltip && <div className="pointer-events-none absolute z-20 border border-[#2A2C2E] bg-[#181A1C] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}</div>}
+    {isLoading && <div className="absolute inset-0 z-20 grid place-items-center bg-[#111213]/80 text-[10px] font-bold uppercase tracking-[0.2em] text-white"><span className="border border-[#2A2C2E] px-6 py-3">Loading Kenya</span></div>}
+    {loadError && <div className="absolute inset-0 z-30 grid place-items-center bg-[#111213] p-6 text-center"><div><p className="text-sm font-bold text-white">Map unavailable</p><p className="mt-2 text-xs text-[#888]">{loadError}</p><button type="button" onClick={() => void navigate("country")} className="mt-6 border border-[#2A2C2E] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-[#2A2C2E]">Retry map</button></div></div>}
   </div>;
 }
