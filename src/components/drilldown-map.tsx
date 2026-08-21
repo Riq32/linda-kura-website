@@ -34,6 +34,70 @@ function containsPoint(feature: AdminUnit, point: [number, number]) {
   return polygons.some(polygon => pointInRing(point, polygon[0]) && polygon.slice(1).every(hole => !pointInRing(point, hole)));
 }
 
+const PARTIES = [
+  { name: 'UDA', color: '#f2a900' },
+  { name: 'ODM', color: '#f26522' },
+  { name: 'Jubilee', color: '#d12421' },
+  { name: 'Wiper', color: '#00aeea' }
+];
+
+function blendPartyColors(winnerColor: string, runnerUpColor: string, margin: number) {
+  const parseHex = (hex: string) => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+  
+  const c1 = parseHex(winnerColor);
+  const c2 = parseHex(runnerUpColor);
+  
+  const winnerRatio = Math.min(1, 0.5 + (margin / 60));
+  const runnerUpRatio = 1 - winnerRatio;
+  
+  const r = Math.round(c1[0] * winnerRatio + c2[0] * runnerUpRatio);
+  const g = Math.round(c1[1] * winnerRatio + c2[1] * runnerUpRatio);
+  const b = Math.round(c1[2] * winnerRatio + c2[2] * runnerUpRatio);
+  
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+function generateMockElectionData(featureId: string, level: string) {
+  let hash = 0;
+  const str = featureId + level;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  
+  const random = () => {
+    const x = Math.sin(hash++) * 10000;
+    return x - Math.floor(x);
+  };
+  
+  const p1Idx = Math.floor(random() * PARTIES.length);
+  let p2Idx = Math.floor(random() * (PARTIES.length - 1));
+  if (p2Idx >= p1Idx) p2Idx++;
+  
+  const winner = PARTIES[p1Idx];
+  const runnerUp = PARTIES[p2Idx];
+  
+  const margin = random() * 40; 
+  const winnerPct = 50 + margin / 2;
+  const runnerUpPct = 50 - margin / 2 - random() * 5;
+  const othersPct = 100 - winnerPct - runnerUpPct;
+  
+  return {
+    winningParty: winner.name,
+    runnerUp: runnerUp.name,
+    margin,
+    partyBreakdown: [
+      { name: winner.name, percentage: winnerPct },
+      { name: runnerUp.name, percentage: runnerUpPct },
+      { name: 'Others', percentage: othersPct }
+    ]
+  };
+}
+
 export function DrilldownMap({ onLocationChange }: { onLocationChange: (location: MapLocation) => void }) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap>();
@@ -45,6 +109,7 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
   const [tooltip, setTooltip] = useState<{ name: string; x: number; y: number }>();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
+  const [electionData, setElectionData] = useState<Record<string, any>>({});
 
   const loadCollection = useCallback(async (name: keyof typeof files) => {
     if (!dataRef.current[name]) {
@@ -61,7 +126,35 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
     const map = mapRef.current;
     if (!map?.getSource("boundaries")) throw new Error("The map boundaries are not ready yet.");
     if (!features.length) throw new Error("No map boundaries are available for this selection.");
+    
+    const newElectionData: Record<string, any> = {};
+    features.forEach(feature => {
+      const id = feature.properties.shapeID;
+      const data = generateMockElectionData(id, next.level);
+      
+      const winnerColor = PARTIES.find(p => p.name === data.winningParty)?.color ?? '#ffffff';
+      const runnerUpColor = PARTIES.find(p => p.name === data.runnerUp)?.color ?? '#ffffff';
+      const blendedColor = blendPartyColors(winnerColor, runnerUpColor, data.margin);
+      
+      newElectionData[id] = { ...data, blendedColor };
+    });
+    setElectionData(newElectionData);
+
     (map.getSource("boundaries") as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features });
+    
+    features.forEach(feature => {
+      const id = feature.properties.shapeID;
+      if (id && newElectionData[id]) {
+        map.setFeatureState(
+          { source: "boundaries", id },
+          { 
+            heatmapColor: newElectionData[id].blendedColor,
+            margin: newElectionData[id].margin
+          }
+        );
+      }
+    });
+
     visibleFeaturesRef.current = features;
     const bounds = bbox(features);
     if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 72, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800, pitch: 53, bearing: -10, maxZoom: next.level === "ward" ? 11.2 : 8.8 });
@@ -107,7 +200,28 @@ export function DrilldownMap({ onLocationChange }: { onLocationChange: (location
     map.on("load", async () => {
       try {
         map.addSource("boundaries", { type: "geojson", data: { type: "FeatureCollection", features: [] }, promoteId: "shapeID" });
-        map.addLayer({ id: "boundary-extrusion", type: "fill-extrusion", source: "boundaries", paint: { "fill-extrusion-color": ["case", ["boolean", ["feature-state", "hover"], false], "#d99b2b", "#1a7a4c"], "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], 5, 3500, 12, 500], "fill-extrusion-base": 0, "fill-extrusion-opacity": .88 } });
+        map.addLayer({
+          id: "boundary-extrusion",
+          type: "fill-extrusion",
+          source: "boundaries",
+          paint: {
+            "fill-extrusion-color": [
+              "case",
+              ["boolean", ["feature-state", "hover"], false],
+              "#ffffff",
+              ["coalesce", ["feature-state", "heatmapColor"], "#07291f"]
+            ],
+            "fill-extrusion-height": [
+              "interpolate",
+              ["linear"],
+              ["zoom"],
+              5, ["+", 1000, ["*", ["coalesce", ["feature-state", "margin"], 10], 62.5]],
+              12, ["+", 200, ["*", ["coalesce", ["feature-state", "margin"], 10], 10]]
+            ],
+            "fill-extrusion-base": 0,
+            "fill-extrusion-opacity": .88
+          }
+        });
         map.addLayer({ id: "boundary-lines", type: "line", source: "boundaries", paint: { "line-color": "#eef3ef", "line-opacity": .44, "line-width": 1.1 } });
       const clearHover = () => {
         if (hoveredId.current) map.setFeatureState({ source: "boundaries", id: hoveredId.current }, { hover: false });
