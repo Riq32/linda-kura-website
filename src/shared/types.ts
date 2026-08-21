@@ -25,3 +25,30 @@ export interface ResultSummary {
   provenance: ResultProvenance;
   candidates: Candidate[];
 }
+
+export interface MapLocation {
+  level: DrillLevel;
+  county?: AdminUnit;
+  constituency?: AdminUnit;
+  ward?: AdminUnit;
+}
+
+export interface PartyResult {
+  party: string;
+  candidate: string;
+  percentage: number;
+  votes: number;
+  color: string;
+}
+
+export interface RegionElectionData {
+  name: string;
+  stationsReportingPct: number;
+  turnoutPct: number;
+  totalVotesCast: number;
+  margin: number;
+  winningParty: string;
+  runnerUp: string;
+  blendedColor?: string;
+  partyBreakdown: PartyResult[];
+}
