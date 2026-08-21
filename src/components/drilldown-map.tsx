@@ -18,6 +18,12 @@ function bbox(features: AdminUnit[]) {
   return values.reduce((result, [x, y]) => result.extend([x, y]), new maplibregl.LngLatBounds());
 }
 
+function getCenter(feature: AdminUnit): [number, number] {
+  const b = bbox([feature]);
+  const center = b.getCenter();
+  return [center.lng, center.lat];
+}
+
 function pointInRing([x, y]: [number, number], ring: GeoJSON.Position[]) {
   let inside = false;
   for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
@@ -51,6 +57,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ name: string; level: string; hierarchy?: string; properties: any }[]>([]);
   const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
+  const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -203,6 +210,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
   useEffect(() => {
     if (!container.current || mapRef.current) return;
     const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#111213" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 58, bearing: -15 });
+    map.keyboard.disable();
     mapRef.current = map;
     requestAnimationFrame(() => map.resize());
     map.on("load", async () => {
@@ -250,6 +258,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
           if (hoveredId.current && hoveredId.current !== id) map.setFeatureState({ source: "boundaries", id: hoveredId.current }, { hover: false });
           if (id && hoveredId.current !== id) {
             hoveredId.current = id;
+            if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
             map.setFeatureState({ source: "boundaries", id }, { hover: true });
             onHoverChange(electionDataRef.current[id] || null);
           }
@@ -328,8 +337,58 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
     ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : [])
   ];
   const caption = location.level === "country" ? { eyebrow: "National view", title: "Kenya counties", copy: "Select a county to explore its constituencies." } : location.level === "county" ? { eyebrow: "County view", title: `${location.county?.properties.shapeName ?? "County"} constituencies`, copy: "Select a constituency to explore its wards." } : { eyebrow: "Constituency view", title: `${location.constituency?.properties.shapeName ?? "Constituency"} wards`, copy: "Hover a ward to identify its boundary." };
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const keys = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+    if (keys.includes(e.key)) {
+      e.preventDefault();
+      const features = visibleFeaturesRef.current;
+      if (!features.length) return;
+      let currentFeature = features.find(f => f.properties.shapeID === hoveredId.current);
+      if (!currentFeature) currentFeature = features[0];
+      const [cx, cy] = getCenter(currentFeature);
+      let bestFeature: AdminUnit | undefined;
+      let minDistance = Infinity;
+      features.forEach(f => {
+        if (f.properties.shapeID === currentFeature?.properties.shapeID) return;
+        const [fx, fy] = getCenter(f);
+        let validDirection = false;
+        if (e.key === "ArrowUp" && fy > cy) validDirection = true;
+        if (e.key === "ArrowDown" && fy < cy) validDirection = true;
+        if (e.key === "ArrowRight" && fx > cx) validDirection = true;
+        if (e.key === "ArrowLeft" && fx < cx) validDirection = true;
+        if (validDirection) {
+          const dist = Math.sqrt(Math.pow(fx - cx, 2) + Math.pow(fy - cy, 2));
+          if (dist < minDistance) {
+            minDistance = dist;
+            bestFeature = f;
+          }
+        }
+      });
+      if (bestFeature) {
+        const newId = bestFeature.properties.shapeID;
+        if (hoveredId.current) map.setFeatureState({ source: "boundaries", id: hoveredId.current }, { hover: false });
+        hoveredId.current = newId;
+        map.setFeatureState({ source: "boundaries", id: newId }, { hover: true });
+        if (typeof navigator !== "undefined" && navigator.vibrate) navigator.vibrate(10);
+        onHoverChange(electionDataRef.current[newId] || null);
+        setAnnouncement(`Navigated to ${bestFeature.properties.shapeName}`);
+        const [bx, by] = getCenter(bestFeature);
+        map.flyTo({ center: [bx, by], speed: 1.2 });
+      }
+    } else if (e.key === "Enter") {
+      const currentFeature = visibleFeaturesRef.current.find(f => f.properties.shapeID === hoveredId.current);
+      if (currentFeature && locationRef.current.level !== "ward") {
+        void drill(currentFeature.properties);
+        setAnnouncement(`Drilled into ${currentFeature.properties.shapeName}`);
+      }
+    }
+  }, [drill, onHoverChange]);
+
   return <div className="relative h-full min-h-0 min-w-0 overflow-hidden bg-[#111213]">
-    <div ref={container} className="absolute inset-0 z-[2]" aria-label="Interactive Kenya administrative boundary map" />
+    <div ref={container} tabIndex={0} onKeyDown={handleKeyDown} className="absolute inset-0 z-[2] focus:outline-none" aria-label="Interactive Kenya administrative boundary map" />
+    <span aria-live="assertive" className="sr-only absolute opacity-0 pointer-events-none">{announcement}</span>
     <div className="pointer-events-none absolute left-6 top-6 z-20 grid gap-0.5"><span className="text-2xl font-bold tracking-[-0.03em] text-white">KURA</span><span className="text-[10px] uppercase tracking-[0.05em] text-[#888]">Kenya boundary explorer</span></div>
 
     <div className="absolute right-6 top-6 z-30 w-[min(300px,calc(100vw-48px))]">
