@@ -106,6 +106,11 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
     electionDataRef.current = newElectionData;
 
     (map.getSource("boundaries") as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features });
+    // Station points belong only to the selected ward. Clear them before every
+    // higher-level navigation so they cannot persist while drilling back up.
+    if (next.level !== "ward" && next.level !== "polling-station") {
+      (map.getSource("polling-stations") as maplibregl.GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
+    }
 
     features.forEach(feature => {
       const id = feature.properties.shapeID;
