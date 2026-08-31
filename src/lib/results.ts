@@ -10,7 +10,7 @@ export const mockResults: ResultSummary = {
   ]
 };
 
-const mockResultsByLevel: Record<DrillLevel, ResultSummary> = {
+const mockResultsByLevel: Partial<Record<DrillLevel, ResultSummary>> = {
   country: mockResults,
   county: {
     race: "Governor", reportingPercent: 47, turnoutPercent: 58.7, provenance: "Mock data",

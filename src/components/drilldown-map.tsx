@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
-import type { AdminUnit, DrillLevel, MapLocation, RegionElectionData } from "@/shared/types";
+import type { AdminUnit, DrillLevel, MapLocation, PollingStation, RegionElectionData } from "@/shared/types";
 
+type StationCollection = GeoJSON.FeatureCollection<GeoJSON.Point, PollingStation["properties"]>;
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, AdminUnit["properties"]>;
 const files = { counties: "/geojson/counties.geojson", constituencies: "/geojson/constituencies.geojson", wards: "/geojson/wards.geojson" } as const;
 
@@ -49,7 +50,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
   const locationRef = useRef<MapLocation>({ level: "country" });
   const hoveredId = useRef<string>();
   const [location, setLocation] = useState<MapLocation>({ level: "country" });
-  const [tooltip, setTooltip] = useState<{ name: string; x: number; y: number }>();
+  const [tooltip, setTooltip] = useState<{ name: string; details?: string; x: number; y: number }>();
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
   const [electionData, setElectionData] = useState<Record<string, RegionElectionData>>({});
@@ -141,6 +142,13 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
     } catch (error) { setLoadError(errorMessage(error)); }
   }, [loadCollection, showFeatures]);
 
+  const loadWardStations = useCallback(async (ward: AdminUnit) => {
+    const response = await fetch("http://localhost:3001/api/polling-stations?wardShapeID=" + encodeURIComponent(ward.properties.shapeID));
+    if (!response.ok) throw new Error("Polling stations could not be loaded.");
+    const collection = await response.json() as StationCollection;
+    (mapRef.current?.getSource("polling-stations") as maplibregl.GeoJSONSource | undefined)?.setData(collection);
+  }, []);
+
   const drill = useCallback(async (properties: AdminUnit["properties"]) => {
     const current = locationRef.current;
     setLoadError(undefined);
@@ -160,9 +168,10 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
         const wards = await loadCollection("wards");
         const ward = wards.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
         showFeatures([ward], { level: "ward", county: current.county, constituency: current.constituency, ward });
+        await loadWardStations(ward);
       }
     } catch (error) { setLoadError(errorMessage(error)); }
-  }, [loadCollection, showFeatures]);
+  }, [loadCollection, loadWardStations, showFeatures]);
 
   const jumpToResult = useCallback(async (result: { name: string; level: string; properties: any }) => {
     setSearchQuery("");
@@ -239,6 +248,8 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
           }
         });
         map.addLayer({ id: "boundary-lines", type: "line", source: "boundaries", paint: { "line-color": "#333333", "line-opacity": .6, "line-width": 1.1 } });
+        map.addSource("polling-stations", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
+        map.addLayer({ id: "polling-stations", type: "circle", source: "polling-stations", paint: { "circle-radius": 4, "circle-color": "#000000", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 } });
         const clearHover = () => {
           if (hoveredId.current) map.setFeatureState({ source: "boundaries", id: hoveredId.current }, { hover: false });
           hoveredId.current = undefined;
@@ -252,6 +263,13 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
             ?? visibleFeaturesRef.current.find(item => containsPoint(item, [event.lngLat.lng, event.lngLat.lat]));
         };
         map.on("mousemove", event => {
+          const station = map.queryRenderedFeatures(event.point, { layers: ["polling-stations"] })[0];
+          if (station) {
+            const properties = station.properties as PollingStation["properties"];
+            setTooltip({ name: properties.name, details: Number(properties.registeredVoters).toLocaleString() + " registered voters" + (properties.located === "approximate" ? " · Approximate location" : ""), x: event.point.x + 14, y: event.point.y + 14 });
+            map.getCanvas().style.cursor = "pointer";
+            return;
+          }
           const feature = featureAtPointer(event);
           if (!feature) { clearHover(); return; }
           const id = feature.properties.shapeID;
@@ -271,6 +289,12 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
         });
         map.on("mouseout", clearHover);
         map.on("click", event => {
+          const station = map.queryRenderedFeatures(event.point, { layers: ["polling-stations"] })[0];
+          if (station && locationRef.current.ward) {
+            const selected = { type: "Feature", properties: station.properties as PollingStation["properties"], geometry: station.geometry as GeoJSON.Point } as PollingStation;
+            const next = { ...locationRef.current, level: "polling-station" as const, station: selected };
+            locationRef.current = next; setLocation(next); onLocationChange(next); return;
+          }
           const feature = featureAtPointer(event);
           if (feature && locationRef.current.level !== "ward") void drill(feature.properties);
         });
@@ -334,7 +358,8 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
     { label: "Kenya", level: "country" as DrillLevel },
     ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" as DrillLevel }] : []),
     ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "constituency" as DrillLevel }] : []),
-    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : [])
+    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : []),
+    ...(location.station ? [{ label: location.station.properties.name, level: "polling-station" as DrillLevel }] : [])
   ];
   const caption = location.level === "country" ? { eyebrow: "National view", title: "Kenya counties", copy: "Select a county to explore its constituencies." } : location.level === "county" ? { eyebrow: "County view", title: `${location.county?.properties.shapeName ?? "County"} constituencies`, copy: "Select a constituency to explore its wards." } : { eyebrow: "Constituency view", title: `${location.constituency?.properties.shapeName ?? "Constituency"} wards`, copy: "Hover a ward to identify its boundary." };
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -428,7 +453,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
       </div>
     </nav>
 
-    {tooltip && <div className="pointer-events-none absolute z-20 border border-[#2A2C2E] bg-[#181A1C] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}</div>}
+    {tooltip && <div className="pointer-events-none absolute z-20 border border-[#2A2C2E] bg-[#181A1C] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}{tooltip.details && <span className="mt-1 block font-medium normal-case tracking-normal text-white/65">{tooltip.details}</span>}</div>}
     {isLoading && <div className="absolute inset-0 z-20 grid place-items-center bg-[#111213]/80 text-[10px] font-bold uppercase tracking-[0.2em] text-white"><span className="border border-[#2A2C2E] px-6 py-3">Loading Kenya</span></div>}
     {loadError && <div className="absolute inset-0 z-30 grid place-items-center bg-[#111213] p-6 text-center"><div><p className="text-sm font-bold text-white">Map unavailable</p><p className="mt-2 text-xs text-[#888]">{loadError}</p><button type="button" onClick={() => void navigate("country")} className="mt-6 border border-[#2A2C2E] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-[#2A2C2E]">Retry map</button></div></div>}
   </div>;
