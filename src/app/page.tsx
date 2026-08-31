@@ -15,9 +15,9 @@ export default function Home() {
   // fallback to selected location data when not hovering
   const selectedData = useMemo(() => {
     if (location.level === "country") return nationalData;
-    const target = location.ward || location.constituency || location.county;
+    const target = location.station || location.ward || location.constituency || location.county;
     if (!target) return nationalData;
-    return generateMockElectionData(target.properties.shapeID, location.level, String(target.properties.shapeName));
+    return generateMockElectionData(("wardShapeID" in target.properties ? target.properties.wardShapeID + target.properties.name : target.properties.shapeID), location.level, String("name" in target.properties ? target.properties.name : target.properties.shapeName));
   }, [location, nationalData]);
 
   const activeData = hoveredData || selectedData;

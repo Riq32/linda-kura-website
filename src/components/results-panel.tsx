@@ -20,7 +20,8 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
     { label: "Kenya", level: "country" },
     ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" }] : []),
     ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "constituency" }] : []),
-    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" }] : [])
+    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" }] : []),
+    ...(location.station ? [{ label: location.station.properties.name, level: "polling-station" }] : [])
   ];
 
   return (
@@ -36,7 +37,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
                 {crumbs.map(c => c.label.toUpperCase()).join(' > ')}
               </span>
-              <h2 className="text-3xl font-bold tracking-tight text-white">{data.name}</h2>
+              <h2 className="text-3xl font-bold tracking-tight text-white">{data.name}</h2>{location.station?.properties.located === "approximate" && <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[#e6c671]">Approximate location</span>}
             </div>
             <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 backdrop-blur-md">
               <span className="relative flex h-2 w-2">
