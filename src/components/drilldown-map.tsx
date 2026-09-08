@@ -6,6 +6,10 @@ import type { AdminUnit, DrillLevel, MapLocation, RegionElectionData } from "@/s
 
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, AdminUnit["properties"]>;
 const files = { counties: "/geojson/counties.geojson", constituencies: "/geojson/constituencies.geojson", wards: "/geojson/wards.geojson" } as const;
+const MAP_ZOOM_BOUNDS = { min: 4.75, max: 13.5 };
+// Keep fitted geometry below the persistent search and breadcrumb overlays.
+const FIT_PADDING = { top: 112, right: 48, bottom: 48, left: 48 };
+const FIT_MAX_ZOOM: Record<DrillLevel, number> = { country: 9.5, county: 9.5, constituency: 11.5, ward: 13 };
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "The map data could not be loaded.";
@@ -16,6 +20,17 @@ function bbox(features: AdminUnit[]) {
   const visit = (node: unknown): void => { if (Array.isArray(node) && typeof node[0] === "number") values.push(node as number[]); else if (Array.isArray(node)) node.forEach(visit); };
   features.forEach(feature => visit(feature.geometry.coordinates));
   return values.reduce((result, [x, y]) => result.extend([x, y]), new maplibregl.LngLatBounds());
+}
+
+function fitMapToFeatures(map: MapLibreMap, features: AdminUnit[], level: DrillLevel, camera?: { pitch: number; bearing: number }) {
+  const bounds = bbox(features);
+  if (bounds.isEmpty()) return;
+  map.fitBounds(bounds, {
+    padding: FIT_PADDING,
+    duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800,
+    maxZoom: FIT_MAX_ZOOM[level],
+    ...camera
+  });
 }
 
 function getCenter(feature: AdminUnit): [number, number] {
@@ -56,7 +71,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
   const electionDataRef = useRef<Record<string, RegionElectionData>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ name: string; level: string; hierarchy?: string; properties: any }[]>([]);
-  const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
+  const [viewMode, setViewMode] = useState<"3D" | "2D">("2D");
   const [announcement, setAnnouncement] = useState("");
 
   useEffect(() => {
@@ -120,8 +135,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
     });
 
     visibleFeaturesRef.current = features;
-    const bounds = bbox(features);
-    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 72, duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800, maxZoom: next.level === "ward" ? 13 : next.level === "constituency" ? 11.5 : 9.5 });
+    fitMapToFeatures(map, features, next.level);
     locationRef.current = next; setLocation(next); onLocationChange(next);
   }, [onLocationChange]);
 
@@ -209,7 +223,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
-    const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#111213" } }] }, center: [37.9, 0.3], zoom: 5.2, pitch: 58, bearing: -15 });
+    const map = new maplibregl.Map({ container: container.current, attributionControl: false, style: { version: 8, sources: {}, layers: [{ id: "ground", type: "background", paint: { "background-color": "#111213" } }] }, center: [37.9, 0.3], zoom: 5.2, minZoom: MAP_ZOOM_BOUNDS.min, maxZoom: MAP_ZOOM_BOUNDS.max, pitch: 0, bearing: 0 });
     map.keyboard.disable();
     mapRef.current = map;
     requestAnimationFrame(() => map.resize());
@@ -336,6 +350,24 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
     ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "constituency" as DrillLevel }] : []),
     ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : [])
   ];
+  const parentCrumb = crumbs.length > 1 ? crumbs[crumbs.length - 2] : undefined;
+  const resetView = useCallback(() => {
+    const map = mapRef.current;
+    const features = visibleFeaturesRef.current;
+    if (!map || !features.length) return;
+
+    fitMapToFeatures(map, features, locationRef.current.level, {
+      pitch: viewMode === "3D" ? 58 : 0,
+      bearing: viewMode === "3D" ? -15 : 0
+    });
+  }, [viewMode]);
+  const changeZoom = useCallback((amount: 1 | -1) => {
+    const map = mapRef.current;
+    if (!map) return;
+    const duration = matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 250;
+    if (amount > 0) map.zoomIn({ duration });
+    else map.zoomOut({ duration });
+  }, []);
   const caption = location.level === "country" ? { eyebrow: "National view", title: "Kenya counties", copy: "Select a county to explore its constituencies." } : location.level === "county" ? { eyebrow: "County view", title: `${location.county?.properties.shapeName ?? "County"} constituencies`, copy: "Select a constituency to explore its wards." } : { eyebrow: "Constituency view", title: `${location.constituency?.properties.shapeName ?? "Constituency"} wards`, copy: "Hover a ward to identify its boundary." };
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
     const map = mapRef.current;
@@ -427,6 +459,19 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: { onLocationCh
         <button type="button" onClick={() => setViewMode("3D")} className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${viewMode === "3D" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"}`}>3D</button>
       </div>
     </nav>
+
+    <div className="absolute bottom-6 left-6 z-20 flex flex-col items-start gap-2" aria-label="Map controls">
+      <div className="overflow-hidden rounded-lg border border-white/15 bg-[#181A1C]/95 shadow-lg backdrop-blur-md">
+        <button type="button" onClick={() => changeZoom(1)} disabled={isLoading} className="grid h-10 w-10 place-items-center border-b border-white/10 text-xl font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/15 disabled:cursor-not-allowed disabled:text-white/30" aria-label="Zoom in" title="Zoom in">+</button>
+        <button type="button" onClick={() => changeZoom(-1)} disabled={isLoading} className="grid h-10 w-10 place-items-center text-xl font-medium text-white transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/15 disabled:cursor-not-allowed disabled:text-white/30" aria-label="Zoom out" title="Zoom out">−</button>
+      </div>
+      <button type="button" onClick={resetView} disabled={isLoading} className="flex h-10 items-center gap-2 rounded-lg border border-white/15 bg-[#181A1C]/95 px-3 text-[10px] font-bold uppercase tracking-widest text-white shadow-lg backdrop-blur-md transition hover:bg-white/10 focus:outline-none focus-visible:bg-white/15 disabled:cursor-not-allowed disabled:text-white/30" title="Reset the current map view">
+        <span aria-hidden="true" className="text-sm leading-none">↺</span> Reset view
+      </button>
+      {parentCrumb && <button type="button" onClick={() => void navigate(parentCrumb.level)} disabled={isLoading} className="flex h-10 items-center rounded-lg border border-[#FFE600]/60 bg-[#111213]/95 px-3 text-[10px] font-bold uppercase tracking-widest text-[#FFE600] shadow-lg backdrop-blur-md transition hover:bg-[#FFE600] hover:text-[#111213] focus:outline-none focus-visible:bg-[#FFE600] focus-visible:text-[#111213] disabled:cursor-not-allowed disabled:border-white/20 disabled:text-white/30" title={`Return to ${parentCrumb.label}`}>
+        Back to {parentCrumb.label}
+      </button>}
+    </div>
 
     {tooltip && <div className="pointer-events-none absolute z-20 border border-[#2A2C2E] bg-[#181A1C] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}</div>}
     {isLoading && <div className="absolute inset-0 z-20 grid place-items-center bg-[#111213]/80 text-[10px] font-bold uppercase tracking-[0.2em] text-white"><span className="border border-[#2A2C2E] px-6 py-3">Loading Kenya</span></div>}

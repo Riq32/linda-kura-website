@@ -15,6 +15,9 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
   const [hoveredLegendParty, setHoveredLegendParty] = useState<string | null>(null);
   
   const data = activeData || nationalData;
+  const reportingPct = data.stationsReportingPct;
+  const isDecided = reportingPct >= 95 && data.margin > 5;
+  const raceStatus = reportingPct < 50 ? "Early count" : reportingPct < 95 ? "Results pending" : isDecided ? "Decided" : "Too Close to Call";
 
   const crumbs = [
     { label: "Kenya", level: "country" },
@@ -26,44 +29,44 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
   return (
     <motion.aside 
       layout 
-      className="flex h-full min-w-0 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-black/70 p-5 shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-2xl" 
+      className="flex h-full min-w-0 flex-col overflow-y-auto rounded-2xl border border-white/10 bg-black/70 p-4 shadow-[0_20px_50px_rgba(0,0,0,0.7)] backdrop-blur-2xl"
       aria-label="Telemetry dashboard"
     >
-      <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1.5 border-b border-white/10 pb-4">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1 border-b border-white/10 pb-3">
           <div className="flex items-start justify-between gap-4">
             <div className="flex flex-col gap-0.5">
               <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">
                 {crumbs.map(c => c.label.toUpperCase()).join(' > ')}
               </span>
-              <h2 className="text-3xl font-bold tracking-tight text-white">{data.name}</h2>
+              <h2 className="text-2xl font-bold leading-tight tracking-tight text-white">{data.name}</h2>
             </div>
             <div className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 backdrop-blur-md">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
               </span>
-              <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-green-400">
-                {data.stationsReportingPct.toFixed(1)}% REPT
+              <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-green-400" title={`${reportingPct.toFixed(1)}% of stations reporting`}>
+                Reporting: {reportingPct.toFixed(1)}%
               </span>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2 pb-2">
-          <div className="flex flex-col gap-1 rounded-xl bg-white/5 p-4">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex flex-col gap-0.5 rounded-xl bg-white/5 p-3">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-white/60">Turnout Rate</span>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold tabular-nums text-white">{data.turnoutPct.toFixed(1)}%</span>
             </div>
             <span className="text-xs font-mono text-white/40">{data.totalVotesCast.toLocaleString()} votes</span>
           </div>
-          <div className="flex flex-col gap-1 rounded-xl bg-white/5 p-4">
+          <div className="flex flex-col gap-0.5 rounded-xl bg-white/5 p-3">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-white/60">Margin</span>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-bold tabular-nums text-white">+{data.margin.toFixed(1)}%</span>
             </div>
-            <span className="text-xs text-white/40">{data.margin > 5 ? "Decided" : "Too Close to Call"}</span>
+            <span className="text-xs text-white/40">{raceStatus}</span>
           </div>
         </div>
 
@@ -82,25 +85,25 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                     exit={{ opacity: 0 }}
                     transition={{ type: "spring", stiffness: 300, damping: 30 }}
                     key={party.party} 
-                    className={`relative overflow-hidden rounded-xl border p-4 transition-opacity duration-200 ${index === 0 ? 'border-[#e6c671]/40 bg-[#e6c671]/5' : 'border-white/5 bg-white/5'}`}
+                    className={`relative overflow-hidden rounded-xl border p-3 transition-opacity duration-200 ${index === 0 ? 'border-[#e6c671]/40 bg-[#e6c671]/5' : 'border-white/5 bg-white/5'}`}
                   >
                     {index === 0 && (
-                      <div className="absolute right-0 top-0 rounded-bl-lg bg-[#e6c671]/20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-[#e6c671]">Projected Winner</div>
+                      <div className="absolute right-0 top-0 rounded-bl-lg bg-[#e6c671]/20 px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-[#e6c671]">{isDecided ? "Projected Winner" : "Current Leader"}</div>
                     )}
-                    <div className="mb-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-4 w-4 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: party.color }} />
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-3.5 w-3.5 rounded-full shadow-[0_0_8px_rgba(0,0,0,0.5)]" style={{ backgroundColor: party.color }} />
                         <div className="flex flex-col">
-                          <span className="text-base font-bold text-white">{party.candidate}</span>
-                          <span className="text-xs font-semibold uppercase tracking-wider text-white/60">{party.party}</span>
+                          <span className="text-sm font-bold text-white">{party.candidate}</span>
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/60">{party.party}</span>
                         </div>
                       </div>
                       <div className="flex flex-col items-end">
-                        <span className="text-base font-bold tabular-nums text-white">{party.percentage.toFixed(1)}%</span>
-                        <span className="text-[11px] font-mono text-white/50">{party.votes.toLocaleString()}</span>
+                        <span className="text-sm font-bold tabular-nums text-white">{party.percentage.toFixed(1)}%</span>
+                        <span className="text-[10px] font-mono text-white/50">{party.votes.toLocaleString()}</span>
                       </div>
                     </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-black/40">
+                    <div className="h-1 w-full overflow-hidden rounded-full bg-black/40">
                       <motion.div 
                         className="h-full rounded-full" 
                         initial={{ width: 0 }}
@@ -116,14 +119,14 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap justify-center gap-2 border-t border-white/10 pt-5">
+        <div className="mt-2 flex flex-wrap justify-center gap-1.5 border-t border-white/10 pt-3">
           {PARTIES.map(party => (
             <button
               key={party.name}
               type="button"
               onMouseEnter={() => setHoveredLegendParty(party.name)}
               onMouseLeave={() => setHoveredLegendParty(null)}
-              className={`flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 transition-colors hover:bg-white/10 ${hoveredLegendParty === party.name ? 'ring-1 ring-white/30' : ''}`}
+              className={`flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 transition-colors hover:bg-white/10 ${hoveredLegendParty === party.name ? 'ring-1 ring-white/30' : ''}`}
             >
               <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: party.color }} />
               <span className="text-[11px] font-semibold uppercase tracking-wider text-white/80">{party.name}</span>
