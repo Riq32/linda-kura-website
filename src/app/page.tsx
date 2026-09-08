@@ -75,42 +75,39 @@ export default function Home() {
             href="/"
             className="flex min-w-0 shrink items-center gap-2.5 text-xl font-extrabold tracking-tight text-slate-900 hover:opacity-90 transition"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm shadow-emerald-600/20">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-white shadow-2xs">
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             </div>
-            <span className="whitespace-nowrap">
-              LINDA<span className="text-amber-500 font-black">—</span><span className="text-emerald-700">KURA</span>
+            <span className="whitespace-nowrap font-extrabold tracking-tight">
+              LINDA<span className="text-slate-300 font-light mx-1">/</span>KURA
             </span>
-            <span className="hidden lg:inline-block rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            <span className="hidden lg:inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 font-mono">
               Electoral Intelligence
             </span>
           </Link>
 
           <div className="flex shrink-0 items-center gap-2.5">
-            <span className="hidden sm:inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
+            <span className="hidden sm:inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Live Election Stream
             </span>
 
             {agent ? (
               <Link
                 href="/admin"
-                className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 shadow-xs"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 shadow-2xs"
               >
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
                 <span>Station: {agent.access_code} →</span>
               </Link>
             ) : (
               <Link
                 href="/admin/login"
-                className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-1.5 text-xs font-bold text-white shadow-xs transition hover:bg-slate-800"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-slate-800"
               >
-                <span>Agent Portal (Form 34A)</span>
+                <span> Login </span>
                 <span className="text-xs opacity-75">🔑</span>
               </Link>
             )}
@@ -125,7 +122,7 @@ export default function Home() {
           <span>/</span>
           <strong className="font-semibold text-slate-800">Electoral Telemetry</strong>
           <span>/</span>
-          <span className="rounded bg-slate-100 px-1.5 py-0.2 font-bold text-slate-700 uppercase">
+          <span className="rounded border border-slate-200 bg-white px-1.5 py-0.2 font-bold text-slate-700 uppercase shadow-2xs">
             {location.level}
           </span>
         </nav>

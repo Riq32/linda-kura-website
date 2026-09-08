@@ -72,7 +72,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
   return (
     <motion.aside
       layout
-      className="relative flex h-full min-w-0 flex-col overflow-y-auto rounded-3xl border border-slate-200/80 bg-slate-50/70 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-2xl antialiased"
+      className="relative flex h-full min-w-0 flex-col overflow-y-auto rounded-3xl border border-slate-200/90 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-2xl antialiased"
       aria-label="Electoral telemetry dashboard"
     >
       <div className="flex flex-col gap-5">
@@ -88,22 +88,19 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
               </h2>
             </div>
 
-            {/* Reporting Badge */}
-            <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 shadow-xs">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-              </span>
-              <span className="whitespace-nowrap text-[11px] font-bold tracking-wide text-emerald-700 font-mono">
-                {data.stationsReportingPct.toFixed(1)}% REPT
+            {/* Reporting Badge - Clean Fintech Monospace */}
+            <div className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1 shadow-2xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="whitespace-nowrap text-[11px] font-bold tracking-wide text-slate-800 font-mono">
+                {data.stationsReportingPct.toFixed(1)}% <span className="text-slate-400 font-normal">REPT</span>
               </span>
             </div>
           </div>
 
           {/* Provenance & Form 34A Audit Trigger Bar */}
           <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-            <div className="flex items-center gap-1.5 rounded-md bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700 border border-emerald-200/60">
-              <svg className="h-3.5 w-3.5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+            <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-2xs">
+              <svg className="h-3.5 w-3.5 text-slate-900" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
               <span>Form 34A/B Verified</span>
@@ -112,7 +109,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
             <button
               type="button"
               onClick={() => setShowAuditModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-xs transition hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-700 shadow-2xs transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900"
             >
               <svg className="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -129,19 +126,19 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
               Elective Position
             </span>
             {raceTally?.isNativeToLevel ? (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 border border-emerald-200/60">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-700 shadow-2xs font-mono">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-900" />
                 Direct Seat
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 border border-blue-200/60">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[10px] font-semibold text-slate-500 shadow-2xs font-mono">
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
                 Parent Race Contribution
               </span>
             )}
           </div>
 
-          <div className="scrollbar-none flex items-center gap-1.5 overflow-x-auto rounded-xl bg-slate-200/60 p-1">
+          <div className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-100/80 p-1">
             {RACES.map(race => {
               const isSelected = selectedRace === race.key;
               return (
@@ -154,8 +151,8 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                   }}
                   className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                     isSelected
-                      ? "bg-white text-slate-900 shadow-sm border border-slate-200/80"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/40"
+                      ? "bg-slate-900 text-white shadow-xs"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                   }`}
                 >
                   {race.shortLabel}
@@ -167,25 +164,20 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
 
         {/* 2. Constitutional Threshold Meter (Presidential Race Only) */}
         {selectedRace === "President" && winner && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-xs">
+          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">
                 50% + 1 Constitutional Threshold
               </span>
-              <span
-                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold tracking-wide ${
-                  winner.voteShare > 50.0
-                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                    : "bg-amber-50 text-amber-700 border border-amber-200"
-                }`}
-              >
+              <span className="inline-flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-700">
+                <span className={`h-1.5 w-1.5 rounded-full ${winner.voteShare > 50.0 ? "bg-emerald-500" : "bg-amber-500"}`} />
                 {winner.voteShare > 50.0 ? "First Round Win Projected" : "Runoff Likely"}
               </span>
             </div>
 
             {/* Threshold Dual Progress Bar */}
             <div className="relative pb-2 pt-1">
-              <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/60">
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/70">
                 <motion.div
                   className="h-full rounded-full"
                   initial={{ width: 0 }}
@@ -200,7 +192,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                 style={{ left: "50%" }}
               >
                 <div className="h-4 w-px bg-slate-400" />
-                <span className="-translate-x-1/2 text-[9px] font-bold text-slate-500 font-mono pt-0.5">
+                <span className="-translate-x-1/2 text-[9px] font-bold text-slate-400 font-mono pt-0.5">
                   50.0%
                 </span>
               </div>
@@ -210,8 +202,8 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
               <span>
                 Leader: <strong className="font-bold text-slate-900">{winner.name}</strong> ({winner.voteShare.toFixed(1)}%)
               </span>
-              <span className="rounded-md bg-slate-50 px-2 py-0.5 font-semibold text-slate-700 border border-slate-200 text-[11px]">
-                24-County Rule: <strong className="text-emerald-600">Met (28/47)</strong>
+              <span className="rounded-md bg-white px-2 py-0.5 font-semibold text-slate-700 border border-slate-200 text-[11px] shadow-2xs">
+                24-County Rule: <strong className="text-slate-900 font-bold">Met (28/47)</strong>
               </span>
             </div>
           </div>
@@ -350,10 +342,10 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                         </span>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md ${
-                          station.status === "completed" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : 
-                          station.status === "reporting" ? "bg-amber-50 text-amber-700 border border-amber-200" : 
-                          "bg-slate-100 text-slate-600 border border-slate-200"
+                        <span className={`px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide rounded-md border font-mono ${
+                          station.status === "completed" ? "bg-slate-900 text-white border-slate-900" : 
+                          station.status === "reporting" ? "bg-white text-slate-700 border-slate-200 shadow-2xs" : 
+                          "bg-slate-50 text-slate-400 border-slate-200"
                         }`}>
                           {station.status === "completed" ? "Reported" : station.status === "reporting" ? "Transmitting" : "Pending"}
                         </span>
@@ -417,13 +409,13 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                       key={candidate.id}
                       className={`relative overflow-hidden rounded-2xl border p-4 transition-all duration-200 ${
                         isWinner
-                          ? "border-amber-300 bg-amber-50/40 shadow-xs"
-                          : "border-slate-200/80 bg-white shadow-xs"
+                          ? "border-slate-300 bg-white shadow-sm ring-1 ring-slate-900/5"
+                          : "border-slate-200/90 bg-white shadow-2xs"
                       }`}
                     >
                       {isWinner && (
-                        <div className="absolute right-0 top-0 rounded-bl-xl bg-amber-100/80 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-800">
-                          Projected Winner
+                        <div className="absolute right-0 top-0 rounded-bl-xl border-b border-l border-slate-200 bg-slate-900 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white font-mono">
+                          Projected Leader
                         </div>
                       )}
 
@@ -508,7 +500,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
               <div className="flex items-start justify-between border-b border-slate-100 pb-4">
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center gap-2">
-                    <span className="rounded-md bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 border border-emerald-200">
+                    <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold font-mono text-slate-800 tracking-wider">
                       IEBC VERIFIED
                     </span>
                     <span className="text-xs font-mono text-slate-400">{auditHash.slice(0, 18)}...</span>
@@ -536,7 +528,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2.5">
                   <span className="text-slate-400">Digital Hash Signature:</span>
-                  <span className="font-bold text-emerald-600 break-all">{auditHash}</span>
+                  <span className="font-bold text-slate-900 break-all">{auditHash}</span>
                 </div>
                 <div className="flex justify-between border-b border-slate-100 pb-2.5">
                   <span className="text-slate-400">Transmission Status:</span>

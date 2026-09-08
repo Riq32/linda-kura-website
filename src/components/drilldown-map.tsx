@@ -868,25 +868,25 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
                 {tooltip.data.level} Level
               </span>
             </div>
-            <div className="flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-emerald-700 font-mono">
-                {tooltip.data.reportingPct.toFixed(1)}% REPT
+            <div className="flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2 py-0.5 shadow-2xs">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="whitespace-nowrap text-[9px] font-bold uppercase tracking-wider text-slate-700 font-mono">
+                {tooltip.data.reportingPct.toFixed(1)}% <span className="text-slate-400 font-normal">REPT</span>
               </span>
             </div>
           </div>
 
           {/* Race Context */}
           <div className="flex items-center justify-between py-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 font-mono">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
               {selectedRace}
             </span>
             {activeTooltipTally.isNativeToLevel ? (
-              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-emerald-700 font-mono">
+              <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-slate-700 font-mono shadow-2xs">
                 Direct Seat
               </span>
             ) : (
-              <span className="rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wider text-blue-700 font-mono">
+              <span className="rounded-md border border-slate-200 bg-white px-2 py-0.5 text-[8px] font-semibold uppercase tracking-wider text-slate-500 font-mono shadow-2xs">
                 Parent Contribution
               </span>
             )}
