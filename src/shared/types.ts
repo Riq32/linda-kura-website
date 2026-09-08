@@ -1,5 +1,13 @@
 export type DrillLevel = "country" | "county" | "constituency" | "ward";
 
+export type RaceType =
+  | "President"
+  | "Governor"
+  | "Senator"
+  | "Woman Representative"
+  | "Member of Parliament"
+  | "Member of County Assembly";
+
 export interface AdminUnitProperties {
   shapeName: string;
   shapeID: string;
@@ -15,8 +23,85 @@ export interface AdminUnit {
   geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon;
 }
 
-export interface Candidate { id: string; name: string; party: string; votes: number; color: "green" | "gold" | "red"; }
-export type ResultProvenance = "Mock data" | "Verified crowdsourced" | "Unverified";
+export interface CandidateResult {
+  id: string;
+  name: string;
+  party: string;
+  partyColor: string;
+  votes: number;
+  voteShare: number; // Percentage e.g. 52.4
+}
+
+export interface PollingStation {
+  id: string;
+  name: string;
+  code: string;
+  registeredVoters: number;
+  votesCast: number;
+  turnoutPct: number;
+  status: "reporting" | "pending" | "completed" | string;
+  results: CandidateResult[];
+}
+
+export interface RaceTally {
+  race: RaceType;
+  level: DrillLevel;
+  isNativeToLevel: boolean;
+  registeredVoters: number;
+  totalVotesCast: number;
+  validVotes: number;
+  rejectedVotes: number;
+  turnoutPct: number;
+  margin: number;
+  winner: CandidateResult;
+  runnerUp: CandidateResult;
+  candidates: CandidateResult[];
+}
+
+export interface DetailedRegionData {
+  shapeID: string;
+  shapeName: string;
+  level: DrillLevel;
+  countyName?: string;
+  constituencyName?: string;
+  registeredVoters: number;
+  totalPollingStations: number;
+  reportingPollingStations: number;
+  reportingPct: number;
+  totalVotesCast: number;
+  turnoutPct: number;
+  blendedColor: string;
+  races: Record<RaceType, RaceTally>;
+  pollingStations?: PollingStation[];
+
+  // Compatibility fields for legacy views / ResultSummary panels
+  name: string;
+  margin: number;
+  stationsReportingPct: number;
+  winningParty: string;
+  runnerUp: string;
+  partyBreakdown: PartyResult[];
+}
+
+export type RegionElectionData = DetailedRegionData;
+
+export interface PartyResult {
+  party: string;
+  candidate: string;
+  percentage: number;
+  votes: number;
+  color: string;
+}
+
+export interface Candidate {
+  id: string;
+  name: string;
+  party: string;
+  votes: number;
+  color: "green" | "gold" | "red" | string;
+}
+
+export type ResultProvenance = "Mock data" | "Verified crowdsourced" | "Unverified" | "Official IEBC Feed";
 
 export interface ResultSummary {
   race: string;
@@ -33,22 +118,85 @@ export interface MapLocation {
   ward?: AdminUnit;
 }
 
-export interface PartyResult {
-  party: string;
-  candidate: string;
-  percentage: number;
-  votes: number;
-  color: string;
+// ----------------------------------------------------
+// Lindakura Elections API Definitions
+// ----------------------------------------------------
+
+export interface AgentUser {
+  id: string;
+  username: string;
+  name: string;
+  access_code: string;
+  county: string;
+  constituency: string;
+  ward: string;
+  polling_station: string;
 }
 
-export interface RegionElectionData {
+export interface AuthResponse {
+  access: string;
+  refresh: string;
+  user: AgentUser;
+}
+
+export interface ApiCandidate {
+  id: string;
+  full_name: string;
+  first_name: string;
+  middle_name?: string | null;
+  last_name: string;
+  other_names?: string | null;
+  photo?: string | null;
+  party?: string | null;
+  party_name: string;
+  party_color: string;
+  position: string;
+  position_name: string;
+  county?: string | null;
+  constituency?: string | null;
+  ward?: string | null;
+  is_independent: boolean;
+  is_active: boolean;
+}
+
+export interface ApiCandidateVote {
+  candidate: string;
+  votes: number;
+}
+
+export interface PollingStationResultBulk {
+  results: Array<ApiCandidateVote | CandidateResult>;
+}
+
+export interface ApiPollingCentre {
+  id: string;
   name: string;
-  stationsReportingPct: number;
-  turnoutPct: number;
-  totalVotesCast: number;
-  margin: number;
-  winningParty: string;
-  runnerUp: string;
-  blendedColor?: string;
-  partyBreakdown: PartyResult[];
+  registered_voters: number;
+  polling_stations_count: number;
+  source_url?: string | null;
+}
+
+export interface ApiWard {
+  id: string;
+  code: number;
+  name: string;
+  registered_voters: number;
+  polling_stations_count: number;
+  polling_centres?: ApiPollingCentre[];
+}
+
+export interface ApiConstituency {
+  id: string;
+  code: number;
+  name: string;
+  registered_voters: number;
+  polling_stations_count: number;
+  wards?: ApiWard[];
+}
+
+export interface ApiCounty {
+  id: string;
+  code: number;
+  name: string;
+  constituencies?: ApiConstituency[];
 }
