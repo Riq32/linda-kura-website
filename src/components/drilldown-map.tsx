@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
 import type { AdminUnit, DrillLevel, MapLocation, DetailedRegionData, RaceType } from "@/shared/types";
-import { generateGranularRegionData, blendPartyColors, ALL_RACE_TYPES } from "@/lib/election-engine";
+import { generateGranularRegionData, ALL_RACE_TYPES } from "@/lib/election-engine";
 
 export type MapVisualizationMode = "margin" | "turnout" | "battleground";
 
@@ -13,6 +13,17 @@ const files = {
   constituencies: "/geojson/constituencies.geojson",
   wards: "/geojson/wards.geojson"
 } as const;
+const MAP_ZOOM_BOUNDS = { min: 4.75, max: 14 };
+const FIT_PADDING = { top: 112, right: 48, bottom: 48, left: 48 };
+const FIT_MAX_ZOOM: Record<DrillLevel, number> = { country: 8.5, county: 10, constituency: 12, ward: 13 };
+const MAX_ZOOM_BY_LEVEL: Record<DrillLevel, number> = { country: 9.5, county: 11, constituency: 13, ward: 14 };
+const EXTRUSION_HEIGHT_PAINT: any = [
+  "interpolate",
+  ["linear"],
+  ["zoom"],
+  5, ["+", 1000, ["*", ["coalesce", ["feature-state", "margin"], 10], 62.5]],
+  12, ["+", 200, ["*", ["coalesce", ["feature-state", "margin"], 10], 10]]
+];
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "The map data could not be loaded.";
@@ -61,29 +72,26 @@ function containsPoint(feature: AdminUnit, point: [number, number]) {
 }
 
 /**
- * Calculates a smooth scientific gradient for turnout:
- * Low turnout (~45% or below): soft ocean slate #3b82f6
- * Mid turnout (~65%): deep teal #0d9488
- * High turnout (~85%+): vibrant emerald #059669
+ * A high-contrast turnout scale. Each 10-point band has a noticeably different
+ * hue and value, so low, average, strong, and exceptional turnout are readable
+ * at a glance without competing with party colors in the dominance view.
  */
 export function getTurnoutGradientColor(turnoutPct: number): string {
   const clamped = Math.min(90, Math.max(45, turnoutPct));
-  const t = (clamped - 45) / 45; // 0 to 1
-
-  let r: number, g: number, b: number;
-  if (t < 0.5) {
-    const localT = t * 2;
-    // From [59, 130, 246] (#3b82f6) to [13, 148, 136] (#0d9488)
-    r = Math.round(59 + (13 - 59) * localT);
-    g = Math.round(130 + (148 - 130) * localT);
-    b = Math.round(246 + (136 - 246) * localT);
-  } else {
-    const localT = (t - 0.5) * 2;
-    // From [13, 148, 136] (#0d9488) to [5, 150, 105] (#059669)
-    r = Math.round(13 + (5 - 13) * localT);
-    g = Math.round(148 + (150 - 148) * localT);
-    b = Math.round(136 + (105 - 136) * localT);
-  }
+  const stops = [
+    { value: 45, color: [29, 78, 216] },  // royal blue — low
+    { value: 55, color: [2, 132, 199] },  // sky — developing
+    { value: 65, color: [8, 145, 178] },  // teal — typical
+    { value: 75, color: [5, 150, 105] },  // emerald — strong
+    { value: 90, color: [6, 95, 70] }     // forest — exceptional
+  ];
+  const upperIndex = stops.findIndex(stop => clamped <= stop.value);
+  const upper = stops[Math.max(1, upperIndex)];
+  const lower = stops[Math.max(0, upperIndex - 1)];
+  const progress = (clamped - lower.value) / (upper.value - lower.value);
+  const [r, g, b] = lower.color.map((channel, index) =>
+    Math.round(channel + (upper.color[index] - channel) * progress)
+  );
 
   return `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
 }
@@ -116,6 +124,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
   const [searchResults, setSearchResults] = useState<{ name: string; level: string; hierarchy?: string; properties: any }[]>([]);
   const [viewMode, setViewMode] = useState<"3D" | "2D">("2D");
   const [announcement, setAnnouncement] = useState("");
+  const [isPointerOverMap, setIsPointerOverMap] = useState(false);
 
   // Map Controls State
   const [selectedRace, setSelectedRace] = useState<RaceType>("President");
@@ -127,6 +136,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
     const map = mapRef.current;
     
     const animateCamera = () => {
+      map.setPaintProperty("boundary-extrusion", "fill-extrusion-height", viewMode === "3D" ? EXTRUSION_HEIGHT_PAINT : 0);
       if (viewMode === "3D") {
         map.easeTo({ pitch: 56, bearing: -12, duration: 1000 });
       } else {
@@ -155,7 +165,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
   }, []);
 
   /**
-   * Updates MapLibre feature-state (heatmapColor, margin) for visible boundaries
+ * Updates MapLibre feature-state (heatmapColor, margin) for visible boundaries
    * based on the selected race and visualization mode.
    */
   const updateFeatureStates = useCallback(
@@ -178,12 +188,10 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         let extrusionHeight = tally ? tally.margin : 10;
 
         if (mode === "margin") {
-          if (tally && tally.winner && tally.runnerUp) {
-            heatmapColor = blendPartyColors(
-              tally.winner.partyColor,
-              tally.runnerUp.partyColor,
-              tally.margin
-            );
+          if (tally?.winner) {
+            // Preserve the party's official hue. Taller terrain communicates
+            // a more decisive lead without altering party identity.
+            heatmapColor = tally.winner.partyColor;
             extrusionHeight = Math.max(5, tally.margin);
           } else {
             heatmapColor = region.blendedColor;
@@ -254,14 +262,8 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
       updateFeatureStates(features, newElectionData, selectedRace, metricMode);
 
       visibleFeaturesRef.current = features;
-      const bounds = bbox(features);
-      if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, {
-          padding: 72,
-          duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800,
-          maxZoom: next.level === "ward" ? 13 : next.level === "constituency" ? 11.5 : 9.5
-        });
-      }
+      map.setMaxZoom(MAX_ZOOM_BY_LEVEL[next.level]);
+      fitMapToFeatures(map, features, next.level);
       locationRef.current = next;
       setLocation(next);
       onLocationChange(next);
@@ -406,17 +408,20 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
           {
             id: "ground",
             type: "background",
-            paint: { "background-color": "#EEF2F6" } // Crisp, bright modern light canvas
+            paint: { "background-color": "#0E1926" }
           }
         ]
       },
       center: [37.9, 0.3],
       zoom: 5.2,
-      pitch: 56,
-      bearing: -12
+      minZoom: MAP_ZOOM_BOUNDS.min,
+      maxZoom: MAP_ZOOM_BOUNDS.max,
+      pitch: 0,
+      bearing: 0
     });
 
     map.keyboard.disable();
+    map.doubleClickZoom.disable();
     mapRef.current = map;
     requestAnimationFrame(() => map.resize());
 
@@ -433,21 +438,10 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
           type: "fill-extrusion",
           source: "boundaries",
           paint: {
-            "fill-extrusion-color": [
-              "case",
-              ["boolean", ["feature-state", "hover"], false],
-              "#FDE047", // Vibrant amber/yellow hover highlight
-              ["coalesce", ["feature-state", "heatmapColor"], "#E2E8F0"]
-            ],
-            "fill-extrusion-height": [
-              "interpolate",
-              ["linear"],
-              ["zoom"],
-              5, ["+", 1000, ["*", ["coalesce", ["feature-state", "margin"], 10], 62.5]],
-              12, ["+", 200, ["*", ["coalesce", ["feature-state", "margin"], 10], 10]]
-            ],
+            "fill-extrusion-color": ["coalesce", ["feature-state", "heatmapColor"], "#E2E8F0"],
+            "fill-extrusion-height": 0,
             "fill-extrusion-base": 0,
-            "fill-extrusion-opacity": 0.94
+            "fill-extrusion-opacity": 0.86
           }
         });
 
@@ -456,9 +450,9 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
           type: "line",
           source: "boundaries",
           paint: {
-            "line-color": "#94A3B8",
-            "line-opacity": 0.7,
-            "line-width": 1.2
+            "line-color": ["case", ["boolean", ["feature-state", "hover"], false], "#FFFFFF", "#334155"],
+            "line-opacity": ["case", ["boolean", ["feature-state", "hover"], false], 1, 0.58],
+            "line-width": ["case", ["boolean", ["feature-state", "hover"], false], 2.5, 1.1]
           }
         });
 
@@ -471,6 +465,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         };
 
         const featureAtPointer = (event: maplibregl.MapMouseEvent) => {
+          if (!map.getLayer("boundary-extrusion")) return undefined;
           const renderedId = map.queryRenderedFeatures(event.point, { layers: ["boundary-extrusion"] })[0]?.properties?.shapeID;
           return (
             visibleFeaturesRef.current.find(item => item.properties.shapeID === renderedId) ??
@@ -478,8 +473,18 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
           );
         };
 
+        map.on("wheel", event => {
+          const canvasBounds = map.getCanvas().getBoundingClientRect();
+          const point: [number, number] = [
+            event.originalEvent.clientX - canvasBounds.left,
+            event.originalEvent.clientY - canvasBounds.top
+          ];
+          if (!map.queryRenderedFeatures(point, { layers: ["boundary-extrusion"] }).length) event.preventDefault();
+        });
+
         map.on("mousemove", event => {
           const feature = featureAtPointer(event);
+          setIsPointerOverMap(Boolean(feature));
           if (!feature) {
             clearHover();
             return;
@@ -650,17 +655,31 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
     [drill, onHoverChange]
   );
 
+  const resetView = useCallback(() => {
+    const map = mapRef.current;
+    const features = visibleFeaturesRef.current;
+    if (!map || !features.length) return;
+
+    const bounds = bbox(features);
+    if (bounds.isEmpty()) return;
+    fitMapToFeatures(map, features, locationRef.current.level, {
+      pitch: viewMode === "3D" ? 56 : 0,
+      bearing: viewMode === "3D" ? -12 : 0
+    });
+  }, [viewMode]);
+
   // Active Race Tally for Rich Tooltip
   const activeTooltipTally = tooltip?.data?.races?.[selectedRace] || tooltip?.data?.races?.["President"];
   const cand1 = activeTooltipTally?.candidates?.[0];
   const cand2 = activeTooltipTally?.candidates?.[1];
 
   return (
-    <div className="relative h-full min-h-0 min-w-0 overflow-hidden bg-[#EEF2F6] select-none font-sans">
+    <div className="relative h-full min-h-0 min-w-0 overflow-hidden bg-[#0E1926] select-none font-sans">
       <div
         ref={container}
         tabIndex={0}
         onKeyDown={handleKeyDown}
+        onPointerLeave={() => setIsPointerOverMap(false)}
         className="absolute inset-0 z-[2] focus:outline-none"
         aria-label="Interactive Kenya administrative boundary map"
       />
@@ -726,19 +745,22 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
               type="button"
               onClick={() => setMetricMode("margin")}
               className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold transition ${
-                metricMode === "margin" ? "bg-slate-900 text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                metricMode === "margin" ? "bg-cyan-400/15 text-cyan-50 ring-1 ring-cyan-300/30 shadow-lg shadow-cyan-950/30" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
-              title="Party Margin Blend: dynamically blends top 2 candidate party colors"
+              title="Party dominance: the winning party's official color is retained; higher terrain means a wider lead"
             >
-              <span className="h-2 w-2 rounded-full bg-[#f2a900]" />
-              <span>Party Blend</span>
+              <span className="flex h-2 w-3 overflow-hidden rounded-full">
+                <span className="w-1/2 bg-[#f2a900]" />
+                <span className="w-1/2 bg-[#f26522]" />
+              </span>
+              <span>Dominance</span>
             </button>
 
             <button
               type="button"
               onClick={() => setMetricMode("turnout")}
               className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold transition ${
-                metricMode === "turnout" ? "bg-emerald-600 text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                metricMode === "turnout" ? "bg-emerald-400/15 text-emerald-100 ring-1 ring-emerald-300/30 shadow-lg shadow-emerald-950/30" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
               title="Turnout Heatmap: gradient based on turnout percentage"
             >
@@ -750,7 +772,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
               type="button"
               onClick={() => setMetricMode("battleground")}
               className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold transition ${
-                metricMode === "battleground" ? "bg-amber-500 text-white shadow-xs" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                metricMode === "battleground" ? "bg-amber-300/15 text-amber-100 ring-1 ring-amber-200/30 shadow-lg shadow-amber-950/30" : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
               }`}
               title="Battleground Races: highlights margin <= 5%"
             >
@@ -765,7 +787,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
               type="button"
               onClick={() => setViewMode("2D")}
               className={`rounded-xl px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
-                viewMode === "2D" ? "bg-slate-900 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                viewMode === "2D" ? "bg-cyan-400/15 text-cyan-50 ring-1 ring-cyan-300/30 shadow-sm" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               2D
@@ -774,7 +796,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
               type="button"
               onClick={() => setViewMode("3D")}
               className={`rounded-xl px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider transition ${
-                viewMode === "3D" ? "bg-slate-900 text-white shadow-xs" : "text-slate-600 hover:text-slate-900"
+                viewMode === "3D" ? "bg-cyan-400/15 text-cyan-50 ring-1 ring-cyan-300/30 shadow-sm" : "text-slate-600 hover:text-slate-900"
               }`}
             >
               3D
@@ -831,6 +853,27 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         </div>
       </div>
 
+      {!isPointerOverMap && metricMode !== "margin" && (
+        <div className="pointer-events-none absolute bottom-4 left-4 z-20 rounded-xl border border-slate-200/90 bg-white/90 px-3 py-2 text-[10px] font-semibold leading-relaxed text-slate-600 shadow-sm backdrop-blur-xl" aria-hidden="true">
+          <span className="block font-bold uppercase tracking-wider text-slate-700">Hover over the map to zoom</span>
+          <span>Scroll up / away: in · down / toward: out</span>
+        </div>
+      )}
+
+      {metricMode === "margin" && (
+        <div className="pointer-events-none absolute bottom-4 left-4 z-20 max-w-[235px] rounded-xl border border-white/40 bg-[#102A2A] px-3.5 py-3 text-[11px] font-medium leading-relaxed text-white shadow-2xl shadow-slate-950/30 ring-1 ring-slate-950/15">
+          <span className="mb-1.5 flex items-center gap-2 font-bold uppercase tracking-wider text-white">
+            <span className="flex h-2 w-7 overflow-hidden rounded-full">
+              <span className="flex-1 bg-[#f2a900]" />
+              <span className="flex-1 bg-[#f26522]" />
+              <span className="flex-1 bg-[#d12421]" />
+            </span>
+            Party dominance
+          </span>
+          <span className="block text-slate-100">Region color identifies the leading party. Higher terrain means a wider lead.</span>
+        </div>
+      )}
+
       {/* Map Camera Controls (Zoom In, Zoom Out, Reset Orientation) */}
       <div className="absolute right-4 bottom-4 z-20 flex flex-col gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1 shadow-md shadow-slate-900/5 backdrop-blur-xl">
         <button
@@ -854,10 +897,10 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         <div className="my-0.5 h-px bg-slate-200/80" />
         <button
           type="button"
-          onClick={() => mapRef.current?.resetNorthPitch({ duration: 500 })}
+          onClick={resetView}
           className="flex h-7 w-7 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-900 text-xs transition"
-          aria-label="Reset North & Pitch"
-          title="Reset orientation to North"
+          aria-label="Reset map view"
+          title="Reset the current map view"
         >
           🧭
         </button>

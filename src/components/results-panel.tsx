@@ -75,12 +75,12 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
   return (
     <motion.aside
       layout
-      className="relative flex h-full min-w-0 flex-col overflow-y-auto rounded-3xl border border-slate-200/90 bg-white/80 p-5 shadow-xl shadow-slate-900/5 backdrop-blur-2xl antialiased"
+      className="relative flex h-full min-w-0 flex-col overflow-y-auto rounded-3xl border border-emerald-950/10 bg-white p-5 shadow-xl shadow-emerald-950/10 backdrop-blur-2xl md:bg-white/88 antialiased"
       aria-label="Electoral telemetry dashboard"
     >
       <div className="flex flex-col gap-5">
         {/* Header Breadcrumbs, Title & Provenance Controls */}
-        <div className="flex flex-col gap-3 border-b border-slate-200/60 pb-4">
+        <div className="flex flex-col gap-3 border-b border-emerald-950/10 pb-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1">
               <span className="truncate text-[10px] font-bold uppercase tracking-wider text-slate-400 font-mono">
@@ -92,7 +92,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
             </div>
 
             {/* Reporting Badge - Clean Fintech Monospace */}
-            <div className="flex shrink-0 items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1 shadow-2xs">
+            <div className="flex shrink-0 items-center gap-2 rounded-lg border border-emerald-900/10 bg-emerald-50/70 px-2.5 py-1 shadow-2xs">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               <span className="whitespace-nowrap text-[11px] font-bold tracking-wide text-slate-800 font-mono">
                 {data.stationsReportingPct.toFixed(1)}% <span className="text-slate-400 font-normal">REPT</span>
@@ -141,7 +141,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
             )}
           </div>
 
-          <div className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+          <div className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-xl border border-emerald-950/10 bg-emerald-50/60 p-1">
             {RACES.map(race => {
               const isSelected = selectedRace === race.key;
               return (
@@ -154,8 +154,8 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                   }}
                   className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
                     isSelected
-                      ? "bg-slate-900 text-white shadow-xs"
-                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                      ? "bg-emerald-800 text-white shadow-sm shadow-emerald-950/15"
+                      : "text-slate-600 hover:text-emerald-950 hover:bg-white"
                   }`}
                 >
                   {race.shortLabel}
@@ -167,7 +167,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
 
         {/* 2. Constitutional Threshold Meter (Presidential Race Only) */}
         {selectedRace === "President" && winner && (
-          <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xs">
+          <div className="flex flex-col gap-3 rounded-2xl border border-emerald-950/10 bg-gradient-to-br from-white to-emerald-50/40 p-4 shadow-2xs">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">
                 50% + 1 Constitutional Threshold
@@ -180,7 +180,7 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
 
             {/* Threshold Dual Progress Bar */}
             <div className="relative pb-2 pt-1">
-              <div className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100 border border-slate-200/70">
+              <div className="relative h-2 w-full overflow-hidden rounded-full border border-emerald-950/10 bg-slate-100">
                 <motion.div
                   className="h-full rounded-full"
                   initial={{ width: 0 }}

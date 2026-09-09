@@ -30,7 +30,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`}>
-      <body className="min-h-screen bg-[#F8FAFC] text-slate-900 font-sans antialiased selection:bg-amber-100 selection:text-amber-900">
+      <body className="min-h-screen bg-[#0B131E] text-slate-900 font-sans antialiased selection:bg-cyan-300/20 selection:text-cyan-50">
         <Providers>{children}</Providers>
       </body>
     </html>

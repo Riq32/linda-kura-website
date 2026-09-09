@@ -68,20 +68,20 @@ export default function Home() {
   const agent = session?.user?.agentProfile;
 
   return (
-    <main className="flex h-dvh min-h-0 flex-col overflow-hidden bg-[#F8FAFC]">
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/85 px-4 py-2.5 backdrop-blur-xl md:px-8 shadow-xs">
+    <main className="flex h-dvh min-h-0 flex-col overflow-hidden bg-transparent">
+      <header className="sticky top-0 z-30 border-b border-emerald-950/10 bg-white/88 px-4 py-2.5 backdrop-blur-xl md:px-8 shadow-sm shadow-emerald-950/5">
         <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-4">
           <Link
             href="/"
             className="flex min-w-0 shrink items-center gap-2.5 text-xl font-extrabold tracking-tight text-slate-900 hover:opacity-90 transition"
           >
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-900 text-white shadow-2xs">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-800 text-white shadow-sm shadow-emerald-950/20">
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             </div>
             <span className="whitespace-nowrap font-extrabold tracking-tight">
-              LINDA<span className="text-slate-300 font-light mx-1">/</span>KURA
+              LINDA<span className="text-emerald-700/35 font-light mx-1">/</span>KURA
             </span>
             <span className="hidden lg:inline-block rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-600 font-mono">
               Electoral Intelligence
@@ -89,7 +89,7 @@ export default function Home() {
           </Link>
 
           <div className="flex shrink-0 items-center gap-2.5">
-            <span className="hidden sm:inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-2xs">
+            <span className="hidden sm:inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-emerald-900/10 bg-emerald-50/70 px-3 py-1.5 text-xs font-semibold text-emerald-950 shadow-2xs">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
               Live Election Stream
             </span>
@@ -105,7 +105,7 @@ export default function Home() {
             ) : (
               <Link
                 href="/admin/login"
-                className="inline-flex items-center gap-1.5 rounded-lg bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white shadow-2xs transition hover:bg-slate-800"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-800 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm shadow-emerald-950/20 transition hover:bg-emerald-900"
               >
                 <span> Login </span>
                 <span className="text-xs opacity-75">🔑</span>
@@ -133,7 +133,7 @@ export default function Home() {
         className="relative mx-auto min-h-0 w-full max-w-[1600px] flex-1 px-4 pb-4 pt-3 md:px-[clamp(16px,3vw,48px)] md:pb-6 md:pt-4"
       >
         <div className="grid h-full min-h-0 grid-cols-1 gap-0 md:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] md:gap-5">
-          <div className="min-h-0 md:sticky md:top-0 md:h-full overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-xl shadow-slate-900/5">
+          <div className="min-h-0 md:sticky md:top-0 md:h-full overflow-hidden rounded-3xl border border-emerald-950/10 bg-white shadow-xl shadow-emerald-950/10">
             <DrilldownMap onLocationChange={handleLocationChange} onHoverChange={setHoveredData} />
           </div>
           <div className="fixed inset-x-2 bottom-0 z-20 h-[min(63dvh,560px)] min-h-0 md:static md:z-auto md:h-full">

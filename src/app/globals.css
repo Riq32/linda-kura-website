@@ -3,18 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --bg: #F8FAFC;
-  --panel: #FFFFFF;
-  --kenya-black: #0F172A;
-  --kenya-red: #DC2626;
-  --kenya-green: #059669;
-  --accent-gold: #D97706;
-  --ink: #0F172A;
-  --ink-dim: #64748B;
+  color-scheme: dark;
+  --bg: #0B131E;
+  --panel: #142131;
+  --kenya-black: #0E1926;
+  --kenya-red: #C92A2A;
+  --kenya-green: #4CD5AE;
+  --accent-gold: #C67A12;
+  --ink: #E7F0F6;
+  --ink-dim: #9BAEBD;
   --radius-continuous: 16px;
   --radius-panel: 24px;
   --spring: cubic-bezier(.22,1.25,.36,1);
-  --shadow-elevation: 0 1px 3px rgba(0,0,0,.05), 0 8px 24px rgba(0,0,0,.04);
+  --shadow-elevation: 0 1px 2px rgba(0,0,0,.24), 0 16px 42px rgba(0,0,0,.22);
 }
 
 * {
@@ -30,7 +31,11 @@ body {
   min-width: 320px;
   min-height: 100%;
   margin: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 8% 0%, rgba(66, 202, 172, .13), transparent 26rem),
+    radial-gradient(circle at 94% 2%, rgba(83, 143, 211, .10), transparent 30rem),
+    radial-gradient(circle at 50% 100%, rgba(23, 65, 85, .2), transparent 34rem),
+    var(--bg);
   color: var(--ink);
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   letter-spacing: -0.01em;
@@ -38,6 +43,14 @@ body {
 
 button {
   font: inherit;
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(101, 229, 199, .48);
+  outline-offset: 2px;
 }
 
 [hidden] {
@@ -49,15 +62,50 @@ button {
 }
 
 .maplibregl-ctrl-attrib {
-  background: rgba(255, 255, 255, 0.8) !important;
-  color: #64748b !important;
+  background: rgba(17, 30, 45, .82) !important;
+  color: #9baebd !important;
   backdrop-filter: blur(8px);
   border-radius: 8px;
   font-size: 10px !important;
 }
 
 .maplibregl-ctrl-attrib a {
-  color: #475569 !important;
+  color: #c7d9e8 !important;
+}
+
+/* The public dashboard shares one layered midnight foundation. Party colors are
+   deliberately excluded: those remain inline data colours on map regions and
+   candidate indicators. */
+[class~="bg-white"],
+[class*="bg-white/"]:not([class*="hover:bg-white/"]) {
+  background-color: rgba(20, 33, 49, .86) !important;
+}
+
+[class~="bg-slate-50"], [class*="bg-slate-50/"]:not([class*="hover:bg-slate-50/"]) { background-color: rgba(25, 41, 59, .78) !important; }
+[class~="bg-slate-100"], [class*="bg-slate-100/"]:not([class*="hover:bg-slate-100/"]) { background-color: rgba(30, 48, 68, .86) !important; }
+[class~="bg-slate-200"], [class*="bg-slate-200/"]:not([class*="hover:bg-slate-200/"]) { background-color: rgba(39, 60, 81, .82) !important; }
+[class~="bg-slate-900"], [class*="bg-slate-900/"]:not([class*="hover:bg-slate-900/"]) { background-color: #182b3f !important; }
+
+[class*="border-slate"],
+[class*="border-emerald-950"],
+[class*="border-emerald-900"] {
+  border-color: rgba(184, 211, 229, .15) !important;
+}
+
+[class*="text-slate-900"] { color: #edf6fc !important; }
+[class*="text-slate-800"] { color: #d9e7f1 !important; }
+[class*="text-slate-700"] { color: #c5d5e1 !important; }
+[class*="text-slate-600"] { color: #aebfce !important; }
+[class*="text-slate-500"], [class*="text-slate-400"] { color: #879bac !important; }
+[class*="text-emerald-950"] { color: #c5f4e4 !important; }
+
+[class*="shadow-slate"], [class*="shadow-emerald"] {
+  --tw-shadow-color: rgba(0, 0, 0, .28) !important;
+}
+
+[class*="hover:bg-slate"]:hover,
+[class*="hover:bg-white"]:hover {
+  background-color: rgba(55, 82, 105, .72) !important;
 }
 
 /* Custom Scrollbars */
@@ -77,11 +125,11 @@ button {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(148, 180, 198, 0.38);
   border-radius: 9999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.7);
+  background: rgba(148, 180, 198, 0.68);
 }
 
 @media (prefers-reduced-motion: reduce) {
