@@ -2,29 +2,19 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
-<<<<<<< HEAD
-<<<<<<< HEAD
-import type { AdminUnit, DrillLevel, MapLocation, PollingStation, RegionElectionData } from "@/shared/types";
-=======
-import type { AdminUnit, DrillLevel, MapLocation, DetailedRegionData, RaceType } from "@/shared/types";
-import { generateGranularRegionData, blendPartyColors, ALL_RACE_TYPES } from "@/lib/election-engine";
-=======
 import type { AdminUnit, DrillLevel, MapLocation, DetailedRegionData, RaceType } from "@/shared/types";
 import { generateGranularRegionData, blendPartyColors, ALL_RACE_TYPES } from "@/lib/election-engine";
 
 export type MapVisualizationMode = "margin" | "turnout" | "battleground";
->>>>>>> ephra
 
-export type MapVisualizationMode = "margin" | "turnout" | "battleground";
->>>>>>> ephra
-
-type StationCollection = GeoJSON.FeatureCollection<GeoJSON.Point, PollingStation["properties"]>;
 type FeatureCollection = GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, AdminUnit["properties"]>;
 const files = {
   counties: "/geojson/counties.geojson",
   constituencies: "/geojson/constituencies.geojson",
   wards: "/geojson/wards.geojson"
 } as const;
+const FIT_PADDING = { top: 112, right: 48, bottom: 48, left: 48 };
+const FIT_MAX_ZOOM: Record<DrillLevel, number> = { country: 8.5, county: 10, constituency: 12, ward: 13 };
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "The map data could not be loaded.";
@@ -38,6 +28,17 @@ function bbox(features: AdminUnit[]) {
   };
   features.forEach(feature => visit(feature.geometry.coordinates));
   return values.reduce((result, [x, y]) => result.extend([x, y]), new maplibregl.LngLatBounds());
+}
+
+function fitMapToFeatures(map: MapLibreMap, features: AdminUnit[], level: DrillLevel, camera?: { pitch: number; bearing: number }) {
+  const bounds = bbox(features);
+  if (bounds.isEmpty()) return;
+  map.fitBounds(bounds, {
+    padding: FIT_PADDING,
+    duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800,
+    maxZoom: FIT_MAX_ZOOM[level],
+    ...camera
+  });
 }
 
 function getCenter(feature: AdminUnit): [number, number] {
@@ -108,22 +109,14 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
   const locationRef = useRef<MapLocation>({ level: "country" });
   const hoveredId = useRef<string>();
   const [location, setLocation] = useState<MapLocation>({ level: "country" });
-<<<<<<< HEAD
-<<<<<<< HEAD
-  const [tooltip, setTooltip] = useState<{ name: string; details?: string; x: number; y: number }>();
-=======
   const [tooltip, setTooltip] = useState<HoverTooltipState | null>(null);
->>>>>>> ephra
-=======
-  const [tooltip, setTooltip] = useState<HoverTooltipState | null>(null);
->>>>>>> ephra
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>();
   const [electionData, setElectionData] = useState<Record<string, DetailedRegionData>>({});
   const electionDataRef = useRef<Record<string, DetailedRegionData>>({});
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<{ name: string; level: string; hierarchy?: string; properties: any }[]>([]);
-  const [viewMode, setViewMode] = useState<"3D" | "2D">("3D");
+  const [viewMode, setViewMode] = useState<"3D" | "2D">("2D");
   const [announcement, setAnnouncement] = useState("");
 
   // Map Controls State
@@ -182,17 +175,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         const region = dataMap[id];
         if (!id || !region) return;
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    (map.getSource("boundaries") as maplibregl.GeoJSONSource).setData({ type: "FeatureCollection", features });
-    // Station points belong only to the selected ward. Clear them before every
-    // higher-level navigation so they cannot persist while drilling back up.
-    if (next.level !== "ward" && next.level !== "polling-station") {
-      (map.getSource("polling-stations") as maplibregl.GeoJSONSource | undefined)?.setData({ type: "FeatureCollection", features: [] });
-    }
-=======
-=======
->>>>>>> ephra
         const tally = region.races?.[race] || region.races?.["President"];
         let heatmapColor = region.blendedColor;
         let extrusionHeight = tally ? tally.margin : 10;
@@ -222,10 +204,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
             extrusionHeight = 4;
           }
         }
-<<<<<<< HEAD
->>>>>>> ephra
-=======
->>>>>>> ephra
 
         map.setFeatureState(
           { source: "boundaries", id },
@@ -238,97 +216,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
     },
     []
   );
-<<<<<<< HEAD
-
-  // Dynamic recoloring when selected race or visualization mode changes
-  useEffect(() => {
-    updateFeatureStates(visibleFeaturesRef.current, electionDataRef.current, selectedRace, metricMode);
-  }, [selectedRace, metricMode, updateFeatureStates]);
-
-  const showFeatures = useCallback(
-    (features: AdminUnit[], next: MapLocation) => {
-      const map = mapRef.current;
-      if (!map?.getSource("boundaries")) throw new Error("The map boundaries are not ready yet.");
-      if (!features.length) throw new Error("No map boundaries are available for this selection.");
-
-      const newElectionData: Record<string, DetailedRegionData> = {};
-      features.forEach(feature => {
-        const id = feature.properties.shapeID;
-        const county_shapeName = feature.properties.county_shapeName || (next.county ? next.county.properties.shapeName : undefined);
-        const constituency_shapeName = feature.properties.constituency_shapeName || (next.constituency ? next.constituency.properties.shapeName : undefined);
-
-        const data = generateGranularRegionData(
-          id,
-          String(feature.properties.shapeName),
-          next.level,
-          county_shapeName,
-          constituency_shapeName
-        );
-        newElectionData[id] = data;
-      });
-
-      setElectionData(newElectionData);
-      electionDataRef.current = newElectionData;
-
-      (map.getSource("boundaries") as maplibregl.GeoJSONSource).setData({
-        type: "FeatureCollection",
-        features
-      });
-
-      // Apply initial feature-state colors & heights
-      updateFeatureStates(features, newElectionData, selectedRace, metricMode);
-
-      visibleFeaturesRef.current = features;
-      const bounds = bbox(features);
-      if (!bounds.isEmpty()) {
-        map.fitBounds(bounds, {
-          padding: 72,
-          duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 800,
-          maxZoom: next.level === "ward" ? 13 : next.level === "constituency" ? 11.5 : 9.5
-        });
-      }
-      locationRef.current = next;
-      setLocation(next);
-      onLocationChange(next);
-    },
-    [onLocationChange, selectedRace, metricMode, updateFeatureStates]
-  );
-
-  const navigate = useCallback(
-    async (target: DrillLevel) => {
-      setTooltip(null);
-      setLoadError(undefined);
-      try {
-        if (target === "country") {
-          const counties = await loadCollection("counties");
-          showFeatures(counties.features as AdminUnit[], { level: "country" });
-          setAnnouncement("Navigated to National Country view");
-          return;
-        }
-        if (target === "county" && locationRef.current.county) {
-          const constituencies = await loadCollection("constituencies");
-          showFeatures(
-            constituencies.features.filter(
-              feature => feature.properties.county_shapeID === locationRef.current.county?.properties.shapeID
-            ) as AdminUnit[],
-            { level: "county", county: locationRef.current.county }
-          );
-          setAnnouncement(`Navigated to ${locationRef.current.county.properties.shapeName} constituencies`);
-        }
-        if (target === "constituency" && locationRef.current.constituency) {
-          const wards = await loadCollection("wards");
-          showFeatures(
-            wards.features.filter(
-              feature => feature.properties.constituency_shapeID === locationRef.current.constituency?.properties.shapeID
-            ) as AdminUnit[],
-            {
-              level: "constituency",
-              county: locationRef.current.county,
-              constituency: locationRef.current.constituency
-            }
-          );
-          setAnnouncement(`Navigated to ${locationRef.current.constituency.properties.shapeName} wards`);
-=======
 
   // Dynamic recoloring when selected race or visualization mode changes
   useEffect(() => {
@@ -455,7 +342,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
           const ward = wards.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
           showFeatures([ward], { level: "ward", county: current.county, constituency: current.constituency, ward });
           setAnnouncement(`Viewing ${properties.shapeName} Ward`);
->>>>>>> ephra
         }
       } catch (error) {
         setLoadError(errorMessage(error));
@@ -463,167 +349,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
     },
     [loadCollection, showFeatures]
   );
-<<<<<<< HEAD
-
-  const drill = useCallback(
-    async (properties: AdminUnit["properties"]) => {
-      const current = locationRef.current;
-      setLoadError(undefined);
-      try {
-        if (current.level === "country") {
-          const county = { type: "Feature", properties, geometry: { type: "Polygon", coordinates: [] } } as AdminUnit;
-          const counties = await loadCollection("counties");
-          const realCounty = counties.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
-          const constituencies = await loadCollection("constituencies");
-          showFeatures(
-            constituencies.features.filter(feature => feature.properties.county_shapeID === properties.shapeID) as AdminUnit[],
-            { level: "county", county: realCounty ?? county }
-          );
-          setAnnouncement(`Drilled into ${properties.shapeName} County`);
-        } else if (current.level === "county") {
-          const constituencies = await loadCollection("constituencies");
-          const constituency = constituencies.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
-          const wards = await loadCollection("wards");
-          showFeatures(
-            wards.features.filter(feature => feature.properties.constituency_shapeID === properties.shapeID) as AdminUnit[],
-            { level: "constituency", county: current.county, constituency }
-          );
-          setAnnouncement(`Drilled into ${properties.shapeName} Constituency`);
-        } else if (current.level === "constituency") {
-          const wards = await loadCollection("wards");
-          const ward = wards.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
-          showFeatures([ward], { level: "ward", county: current.county, constituency: current.constituency, ward });
-          setAnnouncement(`Viewing ${properties.shapeName} Ward`);
-        }
-      } catch (error) {
-        setLoadError(errorMessage(error));
-      }
-    },
-    [loadCollection, showFeatures]
-  );
-
-<<<<<<< HEAD
-  const loadWardStations = useCallback(async (ward: AdminUnit) => {
-    const response = await fetch("http://localhost:3001/api/polling-stations?wardShapeID=" + encodeURIComponent(ward.properties.shapeID));
-    if (!response.ok) throw new Error("Polling stations could not be loaded.");
-    const collection = await response.json() as StationCollection;
-    (mapRef.current?.getSource("polling-stations") as maplibregl.GeoJSONSource | undefined)?.setData(collection);
-  }, []);
-
-  const drill = useCallback(async (properties: AdminUnit["properties"]) => {
-    const current = locationRef.current;
-    setLoadError(undefined);
-    try {
-      if (current.level === "country") {
-        const county = { type: "Feature", properties, geometry: { type: "Polygon", coordinates: [] } } as AdminUnit;
-        const counties = await loadCollection("counties");
-        const realCounty = counties.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
-        const constituencies = await loadCollection("constituencies");
-        showFeatures(constituencies.features.filter(feature => feature.properties.county_shapeID === properties.shapeID) as AdminUnit[], { level: "county", county: realCounty ?? county });
-      } else if (current.level === "county") {
-        const constituencies = await loadCollection("constituencies");
-        const constituency = constituencies.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
-        const wards = await loadCollection("wards");
-        showFeatures(wards.features.filter(feature => feature.properties.constituency_shapeID === properties.shapeID) as AdminUnit[], { level: "constituency", county: current.county, constituency });
-      } else if (current.level === "constituency") {
-        const wards = await loadCollection("wards");
-        const ward = wards.features.find(feature => feature.properties.shapeID === properties.shapeID) as AdminUnit;
-        showFeatures([ward], { level: "ward", county: current.county, constituency: current.constituency, ward });
-        await loadWardStations(ward);
-      }
-    } catch (error) { setLoadError(errorMessage(error)); }
-  }, [loadCollection, loadWardStations, showFeatures]);
-
-  const jumpToResult = useCallback(async (result: { name: string; level: string; properties: any }) => {
-    setSearchQuery("");
-    setLoadError(undefined);
-    try {
-      const { level, properties } = result;
-      if (level === "County") {
-        const counties = await loadCollection("counties");
-        const county = counties.features.find(f => f.properties.shapeID === properties.shapeID) as AdminUnit;
-        const constituencies = await loadCollection("constituencies");
-        const filtered = constituencies.features.filter(f => f.properties.county_shapeID === properties.shapeID) as AdminUnit[];
-        showFeatures(filtered, { level: "county", county });
-      } else if (level === "Constituency") {
-        const targetConstituencyId = properties.shapeID;
-        const constituencies = await loadCollection("constituencies");
-        const constituency = constituencies.features.find(f => f.properties.shapeID === targetConstituencyId) as AdminUnit;
-
-        const targetCountyId = properties.county_shapeID || constituency?.properties?.county_shapeID;
-        const counties = await loadCollection("counties");
-        const county = counties.features.find(f => f.properties.shapeID === targetCountyId) as AdminUnit;
-
-        const wards = await loadCollection("wards");
-        const filtered = wards.features.filter(f => f.properties.constituency_shapeID === targetConstituencyId) as AdminUnit[];
-
-        showFeatures(filtered, { level: "constituency", county, constituency });
-      } else if (level === "Ward") {
-        const targetConstituencyId = properties.constituency_shapeID;
-        const constituencies = await loadCollection("constituencies");
-        const constituency = constituencies.features.find(f => f.properties.shapeID === targetConstituencyId) as AdminUnit;
-
-        const targetCountyId = properties.county_shapeID || constituency?.properties?.county_shapeID;
-        const counties = await loadCollection("counties");
-        const county = counties.features.find(f => f.properties.shapeID === targetCountyId) as AdminUnit;
-
-        const wards = await loadCollection("wards");
-        const ward = wards.features.find(f => f.properties.shapeID === properties.shapeID) as AdminUnit;
-
-        showFeatures([ward], { level: "ward", county, constituency, ward });
-      }
-    } catch (error) {
-      setLoadError(errorMessage(error));
-    }
-  }, [loadCollection, showFeatures]);
-=======
-  const jumpToResult = useCallback(
-    async (result: { name: string; level: string; properties: any }) => {
-      setSearchQuery("");
-      setLoadError(undefined);
-      try {
-        const { level: resLevel, properties } = result;
-        if (resLevel === "County") {
-          const counties = await loadCollection("counties");
-          const county = counties.features.find(f => f.properties.shapeID === properties.shapeID) as AdminUnit;
-          const constituencies = await loadCollection("constituencies");
-          const filtered = constituencies.features.filter(f => f.properties.county_shapeID === properties.shapeID) as AdminUnit[];
-          showFeatures(filtered, { level: "county", county });
-        } else if (resLevel === "Constituency") {
-          const targetConstituencyId = properties.shapeID;
-          const constituencies = await loadCollection("constituencies");
-          const constituency = constituencies.features.find(f => f.properties.shapeID === targetConstituencyId) as AdminUnit;
-
-          const targetCountyId = properties.county_shapeID || constituency?.properties?.county_shapeID;
-          const counties = await loadCollection("counties");
-          const county = counties.features.find(f => f.properties.shapeID === targetCountyId) as AdminUnit;
-
-          const wards = await loadCollection("wards");
-          const filtered = wards.features.filter(f => f.properties.constituency_shapeID === targetConstituencyId) as AdminUnit[];
-
-          showFeatures(filtered, { level: "constituency", county, constituency });
-        } else if (resLevel === "Ward") {
-          const targetConstituencyId = properties.constituency_shapeID;
-          const constituencies = await loadCollection("constituencies");
-          const constituency = constituencies.features.find(f => f.properties.shapeID === targetConstituencyId) as AdminUnit;
-
-          const targetCountyId = properties.county_shapeID || constituency?.properties?.county_shapeID;
-          const counties = await loadCollection("counties");
-          const county = counties.features.find(f => f.properties.shapeID === targetCountyId) as AdminUnit;
-
-          const wards = await loadCollection("wards");
-          const ward = wards.features.find(f => f.properties.shapeID === properties.shapeID) as AdminUnit;
-
-          showFeatures([ward], { level: "ward", county, constituency, ward });
-        }
-      } catch (error) {
-        setLoadError(errorMessage(error));
-      }
-    },
-    [loadCollection, showFeatures]
-  );
->>>>>>> ephra
-=======
 
   const jumpToResult = useCallback(
     async (result: { name: string; level: string; properties: any }) => {
@@ -670,7 +395,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
     },
     [loadCollection, showFeatures]
   );
->>>>>>> ephra
 
   useEffect(() => {
     if (!container.current || mapRef.current) return;
@@ -728,14 +452,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
             "fill-extrusion-opacity": 0.94
           }
         });
-<<<<<<< HEAD
-<<<<<<< HEAD
-        map.addLayer({ id: "boundary-lines", type: "line", source: "boundaries", paint: { "line-color": "#333333", "line-opacity": .6, "line-width": 1.1 } });
-        map.addSource("polling-stations", { type: "geojson", data: { type: "FeatureCollection", features: [] } });
-        map.addLayer({ id: "polling-stations", type: "circle", source: "polling-stations", paint: { "circle-radius": 4, "circle-color": "#000000", "circle-stroke-color": "#ffffff", "circle-stroke-width": 1 } });
-=======
-=======
->>>>>>> ephra
 
         map.addLayer({
           id: "boundary-lines",
@@ -748,10 +464,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
           }
         });
 
-<<<<<<< HEAD
->>>>>>> ephra
-=======
->>>>>>> ephra
         const clearHover = () => {
           if (hoveredId.current) map.setFeatureState({ source: "boundaries", id: hoveredId.current }, { hover: false });
           hoveredId.current = undefined;
@@ -769,13 +481,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         };
 
         map.on("mousemove", event => {
-          const station = map.queryRenderedFeatures(event.point, { layers: ["polling-stations"] })[0];
-          if (station) {
-            const properties = station.properties as PollingStation["properties"];
-            setTooltip({ name: properties.name, details: Number(properties.registeredVoters).toLocaleString() + " registered voters" + (properties.located === "approximate" ? " · Approximate location" : ""), x: event.point.x + 14, y: event.point.y + 14 });
-            map.getCanvas().style.cursor = "pointer";
-            return;
-          }
           const feature = featureAtPointer(event);
           if (!feature) {
             clearHover();
@@ -814,12 +519,6 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         map.on("mouseout", clearHover);
 
         map.on("click", event => {
-          const station = map.queryRenderedFeatures(event.point, { layers: ["polling-stations"] })[0];
-          if (station && locationRef.current.ward) {
-            const selected = { type: "Feature", properties: station.properties as PollingStation["properties"], geometry: station.geometry as GeoJSON.Point } as PollingStation;
-            const next = { ...locationRef.current, level: "polling-station" as const, station: selected };
-            locationRef.current = next; setLocation(next); onLocationChange(next); return;
-          }
           const feature = featureAtPointer(event);
           if (feature && locationRef.current.level !== "ward") {
             void drill(feature.properties);
@@ -895,8 +594,7 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
     { label: "Kenya", level: "country" as DrillLevel },
     ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" as DrillLevel }] : []),
     ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "constituency" as DrillLevel }] : []),
-    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : []),
-    ...(location.station ? [{ label: location.station.properties.name, level: "polling-station" as DrillLevel }] : [])
+    ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" as DrillLevel }] : [])
   ];
 
   // Accessible Keyboard Navigation
@@ -1305,27 +1003,5 @@ export function DrilldownMap({ onLocationChange, onHoverChange }: DrilldownMapPr
         </div>
       )}
     </div>
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-    <nav className="absolute left-6 top-20 z-10 flex flex-wrap items-center gap-4" aria-label="Map location">
-      <div className="flex flex-wrap items-center gap-2">
-        {crumbs.map((crumb, index) => <span key={crumb.level} className="flex items-center gap-2">{index > 0 && <span className="text-[10px] text-[#444]">/</span>}<button type="button" onClick={() => index < crumbs.length - 1 && void navigate(crumb.level)} disabled={index === crumbs.length - 1} className="text-xs font-medium tracking-wide text-[#888] transition hover:text-white disabled:cursor-default disabled:text-white">{crumb.label}</button></span>)}
-      </div>
-      <div className="flex items-center rounded-full border border-white/10 bg-black/60 p-1 backdrop-blur-md">
-        <button type="button" onClick={() => setViewMode("2D")} className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${viewMode === "2D" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"}`}>2D</button>
-        <button type="button" onClick={() => setViewMode("3D")} className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors ${viewMode === "3D" ? "bg-white/20 text-white" : "text-white/50 hover:text-white"}`}>3D</button>
-      </div>
-    </nav>
-
-    {tooltip && <div className="pointer-events-none absolute z-20 border border-[#2A2C2E] bg-[#181A1C] px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-white" style={{ left: tooltip.x, top: tooltip.y }}>{tooltip.name}{tooltip.details && <span className="mt-1 block font-medium normal-case tracking-normal text-white/65">{tooltip.details}</span>}</div>}
-    {isLoading && <div className="absolute inset-0 z-20 grid place-items-center bg-[#111213]/80 text-[10px] font-bold uppercase tracking-[0.2em] text-white"><span className="border border-[#2A2C2E] px-6 py-3">Loading Kenya</span></div>}
-    {loadError && <div className="absolute inset-0 z-30 grid place-items-center bg-[#111213] p-6 text-center"><div><p className="text-sm font-bold text-white">Map unavailable</p><p className="mt-2 text-xs text-[#888]">{loadError}</p><button type="button" onClick={() => void navigate("country")} className="mt-6 border border-[#2A2C2E] px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-white transition hover:bg-[#2A2C2E]">Retry map</button></div></div>}
-  </div>;
-=======
   );
->>>>>>> ephra
-=======
-  );
->>>>>>> ephra
 }

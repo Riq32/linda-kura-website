@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useState, useEffect, useMemo } from "react";
+import { useCallback, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { DrilldownMap } from "@/components/drilldown-map";
 import { ResultsPanel } from "@/components/results-panel";
 import { generateGranularRegionData } from "@/lib/election-engine";
 import { getRegionElectionData } from "@/lib/api-client";
-import type { MapLocation, DetailedRegionData, RegionElectionData } from "@/shared/types";
+import type { MapLocation, DetailedRegionData } from "@/shared/types";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -26,17 +26,6 @@ export default function Home() {
     loadNational();
   }, []);
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-  // fallback to selected location data when not hovering
-  const selectedData = useMemo(() => {
-    if (location.level === "country") return nationalData;
-    const target = location.station || location.ward || location.constituency || location.county;
-    if (!target) return nationalData;
-    return generateMockElectionData(("wardShapeID" in target.properties ? target.properties.wardShapeID + target.properties.name : target.properties.shapeID), location.level, String("name" in target.properties ? target.properties.name : target.properties.shapeName));
-=======
-=======
->>>>>>> ephra
   // Compute selected data based on active location
   const [selectedData, setSelectedData] = useState<DetailedRegionData>(nationalData);
 
@@ -68,10 +57,6 @@ export default function Home() {
     return () => {
       isMounted = false;
     };
-<<<<<<< HEAD
->>>>>>> ephra
-=======
->>>>>>> ephra
   }, [location, nationalData]);
 
   const activeData = hoveredData || selectedData;

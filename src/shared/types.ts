@@ -1,17 +1,3 @@
-<<<<<<< HEAD
-export type DrillLevel = "country" | "county" | "constituency" | "ward" | "polling-station";
-export interface AdminUnitProperties { shapeName: string; shapeID: string; county_shapeName?: string; county_shapeID?: string; constituency_shapeName?: string; constituency_shapeID?: string; }
-export interface AdminUnit { type: "Feature"; properties: AdminUnitProperties; geometry: GeoJSON.Polygon | GeoJSON.MultiPolygon; }
-export interface PollingStationProperties { name: string; wardShapeID: string; wardName: string; constituencyName: string; countyName: string; registeredVoters: number; located: "real" | "approximate"; source: string; }
-export interface PollingStation { type: "Feature"; properties: PollingStationProperties; geometry: GeoJSON.Point; }
-export interface MapLocation { level: DrillLevel; county?: AdminUnit; constituency?: AdminUnit; ward?: AdminUnit; station?: PollingStation; }
-export interface PartyResult { party: string; candidate: string; percentage: number; votes: number; color: string; }
-export interface RegionElectionData { name: string; stationsReportingPct: number; turnoutPct: number; totalVotesCast: number; margin: number; winningParty: string; runnerUp: string; blendedColor?: string; partyBreakdown: PartyResult[]; hasResults?: boolean; registeredVoters?: number; located?: "real" | "approximate"; }
-export interface StationResult { polling_station: { name: string; code?: string | null }; wardShapeID?: string; wardName?: string; constituencyName?: string; countyName?: string; race: string; candidate_name: string; party?: string | null; votes: number; registered_voters?: number; reported?: boolean; }
-export interface Candidate { id: string; name: string; party: string; votes: number; color: "green" | "gold" | "red"; }
-export type ResultProvenance = "Mock data" | "Verified crowdsourced" | "Unverified";
-export interface ResultSummary { race: string; reportingPercent: number; turnoutPercent: number; provenance: ResultProvenance; candidates: Candidate[]; }
-=======
 export type DrillLevel = "country" | "county" | "constituency" | "ward";
 
 export type RaceType =
@@ -95,6 +81,7 @@ export interface DetailedRegionData {
   winningParty: string;
   runnerUp: string;
   partyBreakdown: PartyResult[];
+  hasResults?: boolean;
 }
 
 export type RegionElectionData = DetailedRegionData;
@@ -105,6 +92,21 @@ export interface PartyResult {
   percentage: number;
   votes: number;
   color: string;
+}
+
+/** A reported result recorded at a polling station. */
+export interface StationResult {
+  polling_station: { name: string; code?: string | null };
+  wardShapeID?: string;
+  wardName?: string;
+  constituencyName?: string;
+  countyName?: string;
+  race: string;
+  candidate_name: string;
+  party?: string | null;
+  votes: number;
+  registered_voters?: number;
+  reported?: boolean;
 }
 
 export interface Candidate {
@@ -151,71 +153,6 @@ export interface AuthResponse {
   access: string;
   refresh: string;
   user: AgentUser;
-<<<<<<< HEAD
-=======
-}
-
-export interface ApiCandidate {
-  id: string;
-  full_name: string;
-  first_name: string;
-  middle_name?: string | null;
-  last_name: string;
-  other_names?: string | null;
-  photo?: string | null;
-  party?: string | null;
-  party_name: string;
-  party_color: string;
-  position: string;
-  position_name: string;
-  county?: string | null;
-  constituency?: string | null;
-  ward?: string | null;
-  is_independent: boolean;
-  is_active: boolean;
-}
-
-export interface ApiCandidateVote {
-  candidate: string;
-  votes: number;
-}
-
-export interface PollingStationResultBulk {
-  results: Array<ApiCandidateVote | CandidateResult>;
-}
-
-export interface ApiPollingCentre {
-  id: string;
-  name: string;
-  registered_voters: number;
-  polling_stations_count: number;
-  source_url?: string | null;
-}
-
-export interface ApiWard {
-  id: string;
-  code: number;
-  name: string;
-  registered_voters: number;
-  polling_stations_count: number;
-  polling_centres?: ApiPollingCentre[];
-}
-
-export interface ApiConstituency {
-  id: string;
-  code: number;
-  name: string;
-  registered_voters: number;
-  polling_stations_count: number;
-  wards?: ApiWard[];
-}
-
-export interface ApiCounty {
-  id: string;
-  code: number;
-  name: string;
-  constituencies?: ApiConstituency[];
->>>>>>> ephra
 }
 
 export interface ApiCandidate {
@@ -279,4 +216,3 @@ export interface ApiCounty {
   name: string;
   constituencies?: ApiConstituency[];
 }
->>>>>>> ephra
