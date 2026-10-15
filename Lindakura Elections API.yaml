@@ -1,0 +1,737 @@
+openapi: 3.0.3
+info:
+  title: Lindakura Elections API
+  version: 1.0.0
+  description: API for Kenya electoral data, polling stations, agents and candidates.
+paths:
+  /analysis/constituency/{id}/:
+    get:
+      operationId: analysis_constituency_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - analysis
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /analysis/county/{id}/:
+    get:
+      operationId: analysis_county_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - analysis
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /analysis/presidential/:
+    get:
+      operationId: analysis_presidential_retrieve
+      tags:
+      - analysis
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /analysis/station/{id}/:
+    get:
+      operationId: analysis_station_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - analysis
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /analysis/ward/{id}/:
+    get:
+      operationId: analysis_ward_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - analysis
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/auth/:
+    post:
+      operationId: api_auth_create
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/elections/candidates/:
+    get:
+      operationId: api_elections_candidates_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/elections/candidates/{id}/:
+    get:
+      operationId: api_elections_candidates_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this candidate.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Candidate'
+          description: ''
+  /api/elections/constituencies/:
+    get:
+      operationId: api_elections_constituencies_list
+      parameters:
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Constituency'
+          description: ''
+  /api/elections/constituencies/{id}/:
+    get:
+      operationId: api_elections_constituencies_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this constituency.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Constituency'
+          description: ''
+  /api/elections/counties/:
+    get:
+      operationId: api_elections_counties_list
+      parameters:
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/County'
+          description: ''
+  /api/elections/counties/{id}/:
+    get:
+      operationId: api_elections_counties_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this county.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/County'
+          description: ''
+  /api/elections/polling-centres/:
+    get:
+      operationId: api_elections_polling_centres_list
+      parameters:
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PollingCentre'
+          description: ''
+  /api/elections/polling-centres/{id}/:
+    get:
+      operationId: api_elections_polling_centres_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this polling centre.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollingCentre'
+          description: ''
+  /api/elections/results/:
+    get:
+      operationId: api_elections_results_list
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PollingStationResultBulk'
+          description: ''
+    post:
+      operationId: api_elections_results_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+        required: true
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollingStationResultBulk'
+          description: ''
+  /api/elections/results/{id}/:
+    get:
+      operationId: api_elections_results_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this polling station result.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollingStationResultBulk'
+          description: ''
+    put:
+      operationId: api_elections_results_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this polling station result.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+        required: true
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollingStationResultBulk'
+          description: ''
+    patch:
+      operationId: api_elections_results_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this polling station result.
+        required: true
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPollingStationResultBulk'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPollingStationResultBulk'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPollingStationResultBulk'
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollingStationResultBulk'
+          description: ''
+    delete:
+      operationId: api_elections_results_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this polling station result.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/elections/results/submit/:
+    post:
+      operationId: api_elections_results_submit_create
+      tags:
+      - api
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PollingStationResultBulk'
+        required: true
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PollingStationResultBulk'
+          description: ''
+  /api/elections/wards/:
+    get:
+      operationId: api_elections_wards_list
+      parameters:
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ward'
+          description: ''
+  /api/elections/wards/{id}/:
+    get:
+      operationId: api_elections_wards_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this ward.
+        required: true
+      tags:
+      - api
+      security:
+      - jwtAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ward'
+          description: ''
+components:
+  schemas:
+    Candidate:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        full_name:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          maxLength: 100
+        middle_name:
+          type: string
+          nullable: true
+          maxLength: 100
+        last_name:
+          type: string
+          maxLength: 100
+        other_names:
+          type: string
+          nullable: true
+          maxLength: 255
+        photo:
+          type: string
+          format: uri
+          nullable: true
+        party:
+          type: string
+          format: uuid
+          nullable: true
+        party_name:
+          type: string
+          readOnly: true
+        party_color:
+          type: string
+          readOnly: true
+        position:
+          type: string
+          format: uuid
+        position_name:
+          type: string
+          readOnly: true
+        county:
+          type: string
+          format: uuid
+          nullable: true
+        constituency:
+          type: string
+          format: uuid
+          nullable: true
+        ward:
+          type: string
+          format: uuid
+          nullable: true
+        is_independent:
+          type: boolean
+        is_active:
+          type: boolean
+      required:
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - party_color
+      - party_name
+      - position
+      - position_name
+    CandidateResult:
+      type: object
+      properties:
+        candidate:
+          type: string
+          format: uuid
+        votes:
+          type: integer
+          minimum: 0
+      required:
+      - candidate
+      - votes
+    Constituency:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        name:
+          type: string
+          maxLength: 150
+        registered_voters:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        polling_stations_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        wards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Ward'
+          readOnly: true
+      required:
+      - code
+      - id
+      - name
+      - wards
+    County:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        name:
+          type: string
+          maxLength: 150
+        constituencies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Constituency'
+          readOnly: true
+      required:
+      - code
+      - constituencies
+      - id
+      - name
+    PatchedPollingStationResultBulk:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CandidateResult'
+    PollingCentre:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        registered_voters:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        polling_stations_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        source_url:
+          nullable: true
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+      required:
+      - id
+      - name
+    PollingStationResultBulk:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CandidateResult'
+      required:
+      - results
+    Ward:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        code:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        name:
+          type: string
+          maxLength: 150
+        registered_voters:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        polling_stations_count:
+          type: integer
+          maximum: 9223372036854775807
+          minimum: 0
+          format: int64
+        polling_centres:
+          type: array
+          items:
+            $ref: '#/components/schemas/PollingCentre'
+          readOnly: true
+      required:
+      - code
+      - id
+      - name
+      - polling_centres
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

@@ -8,7 +8,12 @@ const config: Config = {
       borderRadius: { continuous: "var(--radius-continuous)", panel: "var(--radius-panel)" },
       transitionTimingFunction: { spring: "var(--spring)" },
       boxShadow: { elevation: "var(--shadow-elevation)" },
-      fontFamily: { display: ["Inter Display", "Inter", "sans-serif"], data: ["Inter", "Public Sans", "sans-serif"] }
+      fontFamily: {
+        sans: ["var(--font-sans)", "Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "monospace"],
+        display: ["var(--font-sans)", "Plus Jakarta Sans", "Inter", "sans-serif"],
+        data: ["var(--font-mono)", "JetBrains Mono", "monospace"]
+      }
     }
   },
   plugins: []
