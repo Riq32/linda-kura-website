@@ -151,6 +151,71 @@ export interface AuthResponse {
   access: string;
   refresh: string;
   user: AgentUser;
+<<<<<<< HEAD
+=======
+}
+
+export interface ApiCandidate {
+  id: string;
+  full_name: string;
+  first_name: string;
+  middle_name?: string | null;
+  last_name: string;
+  other_names?: string | null;
+  photo?: string | null;
+  party?: string | null;
+  party_name: string;
+  party_color: string;
+  position: string;
+  position_name: string;
+  county?: string | null;
+  constituency?: string | null;
+  ward?: string | null;
+  is_independent: boolean;
+  is_active: boolean;
+}
+
+export interface ApiCandidateVote {
+  candidate: string;
+  votes: number;
+}
+
+export interface PollingStationResultBulk {
+  results: Array<ApiCandidateVote | CandidateResult>;
+}
+
+export interface ApiPollingCentre {
+  id: string;
+  name: string;
+  registered_voters: number;
+  polling_stations_count: number;
+  source_url?: string | null;
+}
+
+export interface ApiWard {
+  id: string;
+  code: number;
+  name: string;
+  registered_voters: number;
+  polling_stations_count: number;
+  polling_centres?: ApiPollingCentre[];
+}
+
+export interface ApiConstituency {
+  id: string;
+  code: number;
+  name: string;
+  registered_voters: number;
+  polling_stations_count: number;
+  wards?: ApiWard[];
+}
+
+export interface ApiCounty {
+  id: string;
+  code: number;
+  name: string;
+  constituencies?: ApiConstituency[];
+>>>>>>> ephra
 }
 
 export interface ApiCandidate {

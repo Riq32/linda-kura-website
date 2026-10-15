@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { mockResults } from "../lib/results";
 <<<<<<< HEAD
+<<<<<<< HEAD
 import type { StationResult } from "../shared/types";
 const app = Fastify({ logger: true }); const io = new Server(app.server, { cors: { origin: true } });
 let stations: GeoJSON.FeatureCollection | undefined; const stationResults: StationResult[] = [];
@@ -17,6 +18,8 @@ async function start() {
  io.on("connection", socket => socket.emit("results:stations", stationResults)); await app.listen({ port: Number(process.env.API_PORT ?? 3001), host: "0.0.0.0" });
 } void start();
 =======
+=======
+>>>>>>> ephra
 import { generateGranularRegionData } from "../lib/election-engine";
 import type { DrillLevel } from "../shared/types";
 

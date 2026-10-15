@@ -34,10 +34,13 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
     ...(location.county ? [{ label: location.county.properties.shapeName, level: "county" }] : []),
     ...(location.constituency ? [{ label: location.constituency.properties.shapeName, level: "constituency" }] : []),
 <<<<<<< HEAD
+<<<<<<< HEAD
     ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" }] : []),
     ...(location.station ? [{ label: location.station.properties.name, level: "polling-station" }] : [])
   ];
 =======
+=======
+>>>>>>> ephra
     ...(location.ward ? [{ label: location.ward.properties.shapeName, level: "ward" }] : [])
   ], [location]);
 
@@ -73,6 +76,9 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
 
   const isWardLevel = location.level === "ward";
   const hasPollingStations = Boolean(data.pollingStations && data.pollingStations.length > 0);
+<<<<<<< HEAD
+>>>>>>> ephra
+=======
 >>>>>>> ephra
 
   return (
@@ -90,7 +96,13 @@ export function ResultsPanel({ location, activeData, nationalData }: ResultsPane
                 {crumbs.map(c => c.label.toUpperCase()).join(" / ")}
               </span>
 <<<<<<< HEAD
+<<<<<<< HEAD
               <h2 className="text-3xl font-bold tracking-tight text-white">{data.name}</h2>{location.station?.properties.located === "approximate" && <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-[#e6c671]">Approximate location</span>}
+=======
+              <h2 className="truncate text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
+                {data.name}
+              </h2>
+>>>>>>> ephra
 =======
               <h2 className="truncate text-2xl font-bold tracking-tight text-slate-900 md:text-3xl">
                 {data.name}
