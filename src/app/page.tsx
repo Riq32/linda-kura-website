@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { DrilldownMap } from "@/components/drilldown-map";
 import { ResultsPanel } from "@/components/results-panel";
 import { generateGranularRegionData } from "@/lib/election-engine";
 import { getRegionElectionData } from "@/lib/api-client";
-import type { MapLocation, DetailedRegionData } from "@/shared/types";
+import type { MapLocation, DetailedRegionData, RegionElectionData } from "@/shared/types";
 
 export default function Home() {
   const { data: session } = useSession();
@@ -26,37 +26,16 @@ export default function Home() {
     loadNational();
   }, []);
 
-  // Compute selected data based on active location
-  const [selectedData, setSelectedData] = useState<DetailedRegionData>(nationalData);
-
-  useEffect(() => {
-    if (location.level === "country") {
-      setSelectedData(nationalData);
-      return;
-    }
+  // fallback to selected location data when not hovering
+  const selectedData = useMemo(() => {
+    if (location.level === "country") return nationalData;
     const target = location.ward || location.constituency || location.county;
-    if (!target) {
-      setSelectedData(nationalData);
-      return;
-    }
-
-    let isMounted = true;
-    const countyName = target.properties.county_shapeName || (location.county ? location.county.properties.shapeName : undefined);
-    const constituencyName = target.properties.constituency_shapeName || (location.constituency ? location.constituency.properties.shapeName : undefined);
-
-    getRegionElectionData(
+    if (!target) return nationalData;
+    return generateGranularRegionData(
       target.properties.shapeID,
-      location.level,
       String(target.properties.shapeName),
-      countyName,
-      constituencyName
-    ).then((res) => {
-      if (isMounted) setSelectedData(res);
-    });
-
-    return () => {
-      isMounted = false;
-    };
+      location.level
+    );
   }, [location, nationalData]);
 
   const activeData = hoveredData || selectedData;
